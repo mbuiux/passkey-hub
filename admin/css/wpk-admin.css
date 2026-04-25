@@ -49,8 +49,8 @@
 
 .wpk-page-header {
     padding: 4px 0 20px;
-    border-bottom: none;
-    margin-bottom: 0;
+    border-bottom: 1px solid var(--wpk-border);
+    margin-bottom: 6px;
 }
 
 .wpk-page-header h1 {
@@ -201,6 +201,18 @@
     transition: border-color .15s ease, box-shadow .15s ease;
     min-height: 36px;
     line-height: 1.3;
+}
+
+/* Select — custom chevron, room for arrow on the right */
+.wpk-settings-card select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 32px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23757575' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px 16px;
+    cursor: pointer;
 }
 .wpk-settings-card input[type="text"]:focus,
 .wpk-settings-card input[type="number"]:focus,
@@ -987,16 +999,15 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   TABS  — override WP native .nav-tab-wrapper to match the design system
+   TABS
    ────────────────────────────────────────────────────────────────────────── */
 
-/* Wrapper: acts as the page-header bottom border and provides spacing below */
-.wpk-settings-wrap .nav-tab-wrapper {
+.wpk-tabs {
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+    margin: -8px 0 24px;
     border-bottom: 1px solid var(--wpk-border);
-    margin: 0 0 28px;
-    padding: 0;
-    background: transparent;
-    box-shadow: none;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -1057,64 +1068,140 @@
     color: var(--wpk-ink);
 }
 
-/* All tabs */
-.wpk-settings-wrap .nav-tab {
+.wpk-tab {
+    display: inline-flex;
+    align-items: center;
+    min-height: 46px;
+    padding: 0 22px;
+    margin: 0 0 -1px;
     border: 1px solid transparent;
-    border-bottom: none;
-    margin: 0 4px -1px 0;
-    padding: 9px 16px;
-    background: transparent;
+    border-bottom-color: var(--wpk-border);
     color: var(--wpk-muted);
     font-size: 13px;
-    font-weight: 500;
-    line-height: 1.4;
-    text-decoration: none;
-    border-radius: var(--wpk-radius-sm) var(--wpk-radius-sm) 0 0;
-    transition: color .15s ease, background .15s ease;
-}
-
-.wpk-settings-wrap .nav-tab:hover,
-.wpk-settings-wrap .nav-tab:focus {
-    color: var(--wpk-ink);
-    background: var(--wpk-surface-alt);
-    border-color: var(--wpk-border) var(--wpk-border) transparent;
-    outline: none;
-    box-shadow: none;
-}
-
-/* Active tab — white background, bottom border transparent, connects to cards below */
-.wpk-settings-wrap .nav-tab-active,
-.wpk-settings-wrap .nav-tab-active:hover,
-.wpk-settings-wrap .nav-tab-active:focus {
-    background: var(--wpk-surface);
-    border-color: var(--wpk-border) var(--wpk-border) var(--wpk-surface);
-    color: var(--wpk-ink);
     font-weight: 600;
+    text-decoration: none;
+    background: transparent;
+    transition: color .15s ease, background .15s ease, border-color .15s ease;
+}
+
+.wpk-tab:hover,
+.wpk-tab:focus {
+    color: var(--wpk-ink);
+    background: rgba(255,255,255,.45);
     box-shadow: none;
     outline: none;
+}
+
+.wpk-tab.is-active {
+    color: var(--wpk-ink);
+    background: var(--wpk-surface);
+    border-color: var(--wpk-border);
+    border-bottom-color: var(--wpk-surface);
+    border-radius: var(--wpk-radius-sm) var(--wpk-radius-sm) 0 0;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
    SHORTCODES TAB
    ────────────────────────────────────────────────────────────────────────── */
 
-.wpk-code-example {
-    background: var(--wpk-surface-alt);
+.wpk-shortcodes-panel {
+    padding: 22px 28px 28px;
+}
+.wpk-shortcodes-panel h2 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--wpk-ink);
+}
+.wpk-shortcodes-panel > p {
+    margin: 0 0 18px;
+    color: var(--wpk-muted);
+    font-size: 12px;
+}
+.wpk-shortcode-list {
+    display: grid;
+    gap: 12px;
+}
+.wpk-shortcode-item {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    gap: 18px;
+    align-items: start;
+    padding: 16px;
     border: 1px solid var(--wpk-border);
     border-radius: var(--wpk-radius-sm);
-    padding: 10px 14px;
-    font-size: 13px;
-    font-family: Consolas, 'Courier New', monospace;
-    color: var(--wpk-ink);
-    margin: 0 0 8px;
-    white-space: pre-wrap;
-    word-break: break-all;
+    background: var(--wpk-surface-alt);
 }
-
-.wpk-shortcodes-body .wpk-settings-card__header code {
-    font-size: 17px;
-    background: transparent;
+.wpk-shortcode-item h3 {
+    margin: 0 0 4px;
+    font-size: 13px;
+    font-weight: 600;
     color: var(--wpk-ink);
+    font-family: Consolas, 'Courier New', monospace;
+}
+.wpk-shortcode-item > div > p {
+    margin: 0 0 10px;
+    font-size: 12px;
+    color: var(--wpk-muted);
+}
+.wpk-shortcode-item > code {
+    display: inline-block;
+    background: var(--wpk-ink);
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: var(--wpk-radius-sm);
+    font-size: 12px;
+    white-space: nowrap;
+    align-self: start;
+    margin-top: 2px;
+}
+.wpk-shortcode-item table {
+    font-size: 12px;
+    border-collapse: collapse;
+    width: 100%;
+}
+.wpk-shortcode-item table th {
+    font-weight: 600;
+    color: var(--wpk-ink);
+    padding: 3px 14px 3px 0;
+    text-align: left;
+    white-space: nowrap;
+    vertical-align: top;
+}
+.wpk-shortcode-item table th code {
+    background: rgba(29,35,39,.06);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11.5px;
+}
+.wpk-shortcode-item table td {
+    color: #3c434a;
+    padding: 3px 0;
+    line-height: 1.5;
+}
+.wpk-shortcode-notes {
+    margin-top: 18px;
+    padding: 14px 18px;
+    border: 1px solid var(--wpk-border);
+    border-radius: var(--wpk-radius-sm);
+    background: var(--wpk-surface-alt);
+}
+.wpk-shortcode-notes h3 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--wpk-ink);
+}
+.wpk-shortcode-notes ul {
+    margin: 0;
+    padding-left: 18px;
+    list-style: disc;
+}
+.wpk-shortcode-notes li {
+    font-size: 12.5px;
+    color: #3c434a;
+    padding: 3px 0;
+    line-height: 1.55;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────

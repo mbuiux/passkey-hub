@@ -203,7 +203,7 @@ class WPK_Settings {
         );
 
         // ── Advanced (tab 2) ───────────────────────────────────
-        add_settings_section( 'wpk_advanced', __( 'Advanced', 'wp-passkeys' ), array( $this, 'section_intro_advanced' ), self::ADVANCED_SLUG );
+        add_settings_section( 'wpk_advanced', __( 'Advanced', 'wp-passkeys' ), array( $this, 'section_intro_advanced' ), self::PAGE_SLUG );
 
         register_setting( self::OPTION_GROUP, 'wpk_challenge_ttl', array(
             'type'              => 'integer',
@@ -211,7 +211,7 @@ class WPK_Settings {
             'sanitize_callback' => array( $this, 'sanitize_challenge_ttl' ),
         ) );
         add_settings_field( 'wpk_challenge_ttl', __( 'Challenge Timeout (seconds)', 'wp-passkeys' ),
-            array( $this, 'field_number' ), self::ADVANCED_SLUG, 'wpk_advanced',
+            array( $this, 'field_number' ), self::PAGE_SLUG, 'wpk_advanced',
             array( 'option' => 'wpk_challenge_ttl', 'min' => 30, 'max' => 600, 'default' => 300,
                    'description' => __( 'How long a passkey registration or login challenge stays valid. 300 seconds (5 minutes) is recommended.', 'wp-passkeys' ) )
         );
@@ -222,7 +222,7 @@ class WPK_Settings {
             'sanitize_callback' => array( $this, 'sanitize_redirect_url' ),
         ) );
         add_settings_field( 'wpk_login_redirect', __( 'Login Redirect URL', 'wp-passkeys' ),
-            array( $this, 'field_text' ), self::ADVANCED_SLUG, 'wpk_advanced',
+            array( $this, 'field_text' ), self::PAGE_SLUG, 'wpk_advanced',
             array( 'option' => 'wpk_login_redirect', 'placeholder' => admin_url(),
                    'description' => __( 'Where to send users after a successful passkey login. Leave blank to use the default WordPress redirect (wp-admin for admins). The wpk_login_redirect filter can override this per-user (Pro).', 'wp-passkeys' ) )
         );
@@ -233,7 +233,7 @@ class WPK_Settings {
             'sanitize_callback' => array( $this, 'sanitize_log_retention' ),
         ) );
         add_settings_field( 'wpk_log_retention_days', __( 'Log Retention (days)', 'wp-passkeys' ),
-            array( $this, 'field_number' ), self::ADVANCED_SLUG, 'wpk_advanced',
+            array( $this, 'field_number' ), self::PAGE_SLUG, 'wpk_advanced',
             array( 'option' => 'wpk_log_retention_days', 'min' => 7, 'max' => 365, 'default' => 90,
                    'description' => __( 'Activity log entries older than this are automatically deleted on the daily cron run. Requires WPK_ENABLE_LOGGING to be active.', 'wp-passkeys' ) )
         );
@@ -244,7 +244,7 @@ class WPK_Settings {
             'sanitize_callback' => 'sanitize_text_field',
         ) );
         add_settings_field( 'wpk_rp_name', __( 'Relying Party Name', 'wp-passkeys' ),
-            array( $this, 'field_text' ), self::ADVANCED_SLUG, 'wpk_advanced',
+            array( $this, 'field_text' ), self::PAGE_SLUG, 'wpk_advanced',
             array( 'option' => 'wpk_rp_name', 'placeholder' => get_bloginfo( 'name' ),
                    'description' => __( 'Your site\'s display name, sent to the authenticator during passkey registration. Some platforms (e.g. Chrome on Windows, Android) show this in the "Create a passkey" dialog. Note: the sign-in prompt always shows your domain (RP ID) — that is a browser/OS requirement and cannot be changed. Defaults to site name.', 'wp-passkeys' ) )
         );
@@ -296,10 +296,11 @@ class WPK_Settings {
                 </p>
             </header>
 
-            <nav class="nav-tab-wrapper">
+            <nav class="wpk-tabs" aria-label="<?php esc_attr_e( 'Settings sections', 'wp-passkeys' ); ?>">
                 <?php foreach ( $tabs as $slug => $label ) : ?>
                     <a href="<?php echo esc_url( $base_url . '&tab=' . $slug ); ?>"
-                       class="nav-tab<?php echo $current_tab === $slug ? ' nav-tab-active' : ''; ?>">
+                       class="wpk-tab<?php echo $current_tab === $slug ? ' is-active' : ''; ?>"
+                       <?php echo $current_tab === $slug ? 'aria-current="page"' : ''; ?>>
                         <?php echo esc_html( $label ); ?>
                     </a>
                 <?php endforeach; ?>
@@ -344,7 +345,7 @@ class WPK_Settings {
                         <form method="post" action="options.php">
                             <?php
                             settings_fields( self::OPTION_GROUP );
-                            do_settings_sections( self::ADVANCED_SLUG );
+                            $this->render_settings_section( 'wpk_advanced' );
                             $this->render_submit_row( 'advanced' );
                             ?>
                         </form>
@@ -449,6 +450,32 @@ class WPK_Settings {
     }
 
     // ──────────────────────────────────────────────────────────
+    // Render a single section from PAGE_SLUG sections registry
+    // ──────────────────────────────────────────────────────────
+
+    private function render_settings_section( string $section_id ): void {
+        global $wp_settings_sections, $wp_settings_fields;
+
+        if ( ! isset( $wp_settings_sections[ self::PAGE_SLUG ][ $section_id ] ) ) {
+            return;
+        }
+
+        $section = $wp_settings_sections[ self::PAGE_SLUG ][ $section_id ];
+
+        if ( $section['title'] ) {
+            echo '<h2>' . esc_html( $section['title'] ) . '</h2>';
+        }
+        if ( $section['callback'] ) {
+            call_user_func( $section['callback'], $section );
+        }
+        if ( ! empty( $wp_settings_fields[ self::PAGE_SLUG ][ $section_id ] ) ) {
+            echo '<table class="form-table" role="presentation">';
+            do_settings_fields( self::PAGE_SLUG, $section_id );
+            echo '</table>';
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────
     // Shortcodes reference tab
     // ──────────────────────────────────────────────────────────
 
@@ -482,70 +509,50 @@ class WPK_Settings {
             ),
         );
         ?>
-        <div class="wpk-settings-body wpk-shortcodes-body">
+        <div class="wpk-settings-body">
             <div class="wpk-settings-main">
-
-                <?php foreach ( $shortcodes as $sc ) : ?>
-                <div class="wpk-settings-card" style="margin-bottom:20px;">
-                    <div class="wpk-settings-card__header">
-                        <h2><code><?php echo esc_html( $sc['tag'] ); ?></code></h2>
-                        <p><?php echo esc_html( $sc['description'] ); ?></p>
-                    </div>
-                    <div style="padding:0 24px 20px;">
-
-                        <h3 style="font-size:13px;margin:18px 0 8px;"><?php esc_html_e( 'Attributes', 'wp-passkeys' ); ?></h3>
-                        <table class="widefat wpk-credentials-table" style="max-width:660px;">
-                            <thead>
-                                <tr>
-                                    <th style="width:160px;"><?php esc_html_e( 'Attribute', 'wp-passkeys' ); ?></th>
-                                    <th><?php esc_html_e( 'Description', 'wp-passkeys' ); ?></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ( $sc['attrs'] as $attr => $desc ) : ?>
-                                <tr>
-                                    <td><code><?php echo esc_html( $attr ); ?></code></td>
-                                    <td><?php echo esc_html( $desc ); ?></td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-
-                        <h3 style="font-size:13px;margin:18px 0 8px;"><?php esc_html_e( 'Examples', 'wp-passkeys' ); ?></h3>
-                        <?php foreach ( $sc['examples'] as $ex ) : ?>
-                            <pre class="wpk-code-example"><?php echo esc_html( $ex ); ?></pre>
-                        <?php endforeach; ?>
-
-                    </div>
-                </div>
-                <?php endforeach; ?>
-
                 <div class="wpk-settings-card">
-                    <div class="wpk-settings-card__header">
-                        <h2><?php esc_html_e( 'Notes', 'wp-passkeys' ); ?></h2>
-                    </div>
-                    <div style="padding:12px 24px 20px;">
-                        <ul style="list-style:disc;padding-left:18px;margin:0;line-height:1.9;">
-                            <li><?php esc_html_e( 'Both shortcodes output nothing when passkeys are disabled or the WebAuthn library is missing.', 'wp-passkeys' ); ?></li>
-                            <li><?php esc_html_e( '[wpk_login_button] is hidden for already-logged-in users.', 'wp-passkeys' ); ?></li>
-                            <li><?php esc_html_e( '[wpk_register_button] is hidden for logged-out visitors and for roles not in the Eligible Roles setting.', 'wp-passkeys' ); ?></li>
-                            <li><?php esc_html_e( 'Scripts and styles are only enqueued when the shortcode is actually rendered on the page.', 'wp-passkeys' ); ?></li>
-                            <li>
-                                <?php
-                                printf(
-                                    wp_kses(
-                                        /* translators: %s settings URL */
-                                        __( 'The global login redirect can be configured on the <a href="%s">Advanced tab</a>.', 'wp-passkeys' ),
-                                        array( 'a' => array( 'href' => array() ) )
-                                    ),
-                                    esc_url( admin_url( 'options-general.php?page=wp-passkeys&tab=advanced' ) )
-                                );
-                                ?>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
+                    <section class="wpk-shortcodes-panel">
+                        <h2><?php esc_html_e( 'Shortcodes', 'wp-passkeys' ); ?></h2>
+                        <p><?php esc_html_e( 'Use these snippets in pages, posts, blocks, and compatible builders.', 'wp-passkeys' ); ?></p>
 
+                        <div class="wpk-shortcode-list">
+                            <?php foreach ( $shortcodes as $sc ) : ?>
+                            <article class="wpk-shortcode-item">
+                                <div>
+                                    <h3><?php echo esc_html( $sc['tag'] ); ?></h3>
+                                    <p><?php echo esc_html( $sc['description'] ); ?></p>
+                                    <table>
+                                        <tbody>
+                                            <?php foreach ( $sc['attrs'] as $attr => $desc ) : ?>
+                                            <tr>
+                                                <th><code><?php echo esc_html( $attr ); ?></code></th>
+                                                <td><?php echo esc_html( $desc ); ?></td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <code><?php echo esc_html( $sc['tag'] ); ?></code>
+                            </article>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <div class="wpk-shortcode-notes">
+                            <h3><?php esc_html_e( 'Notes', 'wp-passkeys' ); ?></h3>
+                            <ul>
+                                <li><?php esc_html_e( 'Both shortcodes output nothing when passkeys are disabled or the WebAuthn library is missing.', 'wp-passkeys' ); ?></li>
+                                <li><?php esc_html_e( '[wpk_login_button] is hidden for already-logged-in users.', 'wp-passkeys' ); ?></li>
+                                <li><?php esc_html_e( '[wpk_register_button] is hidden for logged-out visitors and for roles not in the Eligible Roles setting.', 'wp-passkeys' ); ?></li>
+                                <li><?php esc_html_e( 'Scripts and styles are only enqueued when the shortcode is actually rendered on the page.', 'wp-passkeys' ); ?></li>
+                                <li><?php printf(
+                                    wp_kses( __( 'The global login redirect can be configured on the <a href="%s">Advanced tab</a>.', 'wp-passkeys' ), array( 'a' => array( 'href' => array() ) ) ),
+                                    esc_url( admin_url( 'options-general.php?page=wp-passkeys&tab=advanced' ) )
+                                ); ?></li>
+                            </ul>
+                        </div>
+                    </section>
+                </div>
             </div>
             <aside class="wpk-settings-sidebar">
                 <?php $this->render_pro_card(); ?>
