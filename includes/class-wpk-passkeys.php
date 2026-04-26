@@ -425,9 +425,9 @@ class WPK_Passkeys {
             <div class="wpk-profile-card">
 
                 <div class="wpk-profile-register-row">
-                    <div class="wpk-profile-register-label">
-                        <label for="wpk-passkey-label"><?php esc_html_e( 'Register new passkey', 'wp-passkeys' ); ?></label>
-                        <p><?php esc_html_e( 'Tip: open this page on your phone to save to iCloud Keychain or Google Password Manager.', 'wp-passkeys' ); ?></p>
+                    <div class="wpk-profile-register-header">
+                        <span class="wpk-profile-register-title"><?php esc_html_e( 'Register new passkey', 'wp-passkeys' ); ?></span>
+                        <span class="wpk-profile-register-desc"><?php esc_html_e( 'Sign in with your fingerprint, face, or a hardware key — no password needed.', 'wp-passkeys' ); ?></span>
                     </div>
 
                     <?php if ( $at_limit ) : ?>
@@ -443,15 +443,17 @@ class WPK_Passkeys {
                         </div>
                     <?php else : ?>
                         <div class="wpk-profile-register-controls">
+                            <label for="wpk-passkey-label" class="screen-reader-text"><?php esc_html_e( 'Device label (optional)', 'wp-passkeys' ); ?></label>
                             <input type="text"
                                    id="wpk-passkey-label"
                                    class="wpk-profile-label-input"
                                    placeholder="<?php esc_attr_e( 'Device label (optional)', 'wp-passkeys' ); ?>"
                                    maxlength="100" />
                             <button type="button" class="wpk-profile-btn" id="wpk-passkey-register">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg>
                                 <?php esc_html_e( 'Register New Passkey', 'wp-passkeys' ); ?>
                             </button>
+                            <p class="wpk-profile-tip"><?php esc_html_e( 'Tip: open this page on your phone to save to iCloud Keychain or Google Password Manager.', 'wp-passkeys' ); ?></p>
                             <p id="wpk-passkey-profile-message" class="wpk-inline-message" role="alert" aria-live="assertive"></p>
                         </div>
                     <?php endif; ?>

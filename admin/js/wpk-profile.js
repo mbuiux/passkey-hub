@@ -145,13 +145,6 @@
                         registerBtn.disabled = false;
                     });
             });
-
-            // Show mobile hint once — insert after the actions row, not inside it
-            var mobileHintEl = document.createElement('p');
-            mobileHintEl.className = 'description wpk-mobile-hint';
-            mobileHintEl.textContent = WPKProfile.messages.mobileHint;
-            var actionsDiv = registerBtn.parentNode; // .wpk-register-actions
-            actionsDiv.parentNode.insertBefore(mobileHintEl, actionsDiv.nextSibling);
         }
 
         // Revoke buttons
