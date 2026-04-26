@@ -409,86 +409,97 @@ class WPK_Passkeys {
         $max_passkeys = $this->get_max_passkeys_per_user( $user );
         $at_limit     = count( $credentials ) >= $max_passkeys;
         ?>
-        <div class="wpk-profile-section">
-            <h2><?php esc_html_e( 'Passkeys', 'wp-passkeys' ); ?></h2>
-            <p class="description">
-                <?php esc_html_e( 'Sign in with your fingerprint, face, or a hardware security key — no password needed.', 'wp-passkeys' ); ?>
-            </p>
+        <div class="wpk-profile-section" id="wpk-profile-section">
 
-            <table class="form-table wpk-profile-table" role="presentation">
-                <tr>
-                    <th><label for="wpk-passkey-label"><?php esc_html_e( 'Register Passkey', 'wp-passkeys' ); ?></label></th>
-                    <td>
-                        <div class="wpk-register-wrap">
-                        <?php if ( $at_limit ) : ?>
-                            <p class="description wpk-notice-warning">
-                                <?php
-                                printf(
-                                    /* translators: %d number of passkeys */
-                                    esc_html__( 'You have registered the maximum of %d passkeys. Revoke one to add another.', 'wp-passkeys' ),
-                                    esc_html( $max_passkeys )
-                                );
-                                ?>
-                                <?php do_action( 'wpk_profile_limit_reached_cta', $user ); ?>
-                            </p>
-                        <?php else : ?>
+            <div class="wpk-profile-header">
+                <div>
+                    <h2><?php esc_html_e( 'Passkeys', 'wp-passkeys' ); ?></h2>
+                    <p><?php esc_html_e( 'Sign in with your fingerprint, face, or a hardware security key — no password needed.', 'wp-passkeys' ); ?></p>
+                </div>
+                <span class="wpk-profile-count">
+                    <?php echo esc_html( count( $credentials ) ); ?>&thinsp;/&thinsp;<?php echo esc_html( $max_passkeys ); ?>
+                    <span class="wpk-profile-count-label"><?php esc_html_e( 'passkeys', 'wp-passkeys' ); ?></span>
+                </span>
+            </div>
+
+            <div class="wpk-profile-card">
+
+                <div class="wpk-profile-register-row">
+                    <div class="wpk-profile-register-label">
+                        <label for="wpk-passkey-label"><?php esc_html_e( 'Register new passkey', 'wp-passkeys' ); ?></label>
+                        <p><?php esc_html_e( 'Tip: open this page on your phone to save to iCloud Keychain or Google Password Manager.', 'wp-passkeys' ); ?></p>
+                    </div>
+
+                    <?php if ( $at_limit ) : ?>
+                        <div class="wpk-profile-limit-notice">
+                            <?php
+                            printf(
+                                /* translators: %d number of passkeys */
+                                esc_html__( 'You have reached the maximum of %d passkeys. Revoke one to add another.', 'wp-passkeys' ),
+                                (int) $max_passkeys
+                            );
+                            ?>
+                            <?php do_action( 'wpk_profile_limit_reached_cta', $user ); ?>
+                        </div>
+                    <?php else : ?>
+                        <div class="wpk-profile-register-controls">
                             <input type="text"
                                    id="wpk-passkey-label"
-                                   class="wpk-label-input"
+                                   class="wpk-profile-label-input"
                                    placeholder="<?php esc_attr_e( 'Device label (optional)', 'wp-passkeys' ); ?>"
                                    maxlength="100" />
-                            <div class="wpk-register-actions">
-                                <button type="button" class="button button-primary" id="wpk-passkey-register">
-                                    <?php esc_html_e( 'Register New Passkey', 'wp-passkeys' ); ?>
-                                </button>
-                                <p id="wpk-passkey-profile-message" class="wpk-inline-message" aria-live="polite"></p>
-                            </div>
-                        <?php endif; ?>
+                            <button type="button" class="wpk-profile-btn" id="wpk-passkey-register">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg>
+                                <?php esc_html_e( 'Register New Passkey', 'wp-passkeys' ); ?>
+                            </button>
+                            <p id="wpk-passkey-profile-message" class="wpk-inline-message" role="alert" aria-live="assertive"></p>
                         </div>
-                    </td>
-                </tr>
+                    <?php endif; ?>
+                </div>
 
                 <?php if ( ! empty( $credentials ) ) : ?>
-                <tr>
-                    <th><?php esc_html_e( 'Registered Passkeys', 'wp-passkeys' ); ?></th>
-                    <td>
-                        <table class="widefat wpk-credentials-table">
-                            <thead>
-                                <tr>
-                                    <th><?php esc_html_e( 'Label', 'wp-passkeys' ); ?></th>
-                                    <th><?php esc_html_e( 'Registered', 'wp-passkeys' ); ?></th>
-                                    <th><?php esc_html_e( 'Last Used', 'wp-passkeys' ); ?></th>
-                                    <?php do_action( 'wpk_profile_table_header', $user ); ?>
-                                    <th class="wpk-col-action"><?php esc_html_e( 'Action', 'wp-passkeys' ); ?></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ( $credentials as $cred ) : ?>
-                                    <tr data-credential-id="<?php echo esc_attr( (string) $cred->id ); ?>">
-                                        <td class="wpk-col-label"><?php echo esc_html( $cred->credential_label ?: 'Passkey' ); ?></td>
-                                        <td><?php echo esc_html( mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $cred->created_at ) ); ?></td>
-                                        <td><?php echo $cred->last_used_at ? esc_html( mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $cred->last_used_at ) ) : esc_html__( 'Never', 'wp-passkeys' ); ?></td>
-                                        <?php do_action( 'wpk_profile_table_row', $cred, $user ); ?>
-                                        <td class="wpk-col-action">
-                                            <button class="button-link-delete wpk-passkey-revoke" type="button">
-                                                <?php esc_html_e( 'Revoke', 'wp-passkeys' ); ?>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                <div class="wpk-profile-creds">
+                    <?php if ( count( $credentials ) === 1 ) : ?>
+                        <div class="wpk-profile-warning">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            <?php esc_html_e( 'Only one passkey registered. Add a backup on another device to avoid getting locked out.', 'wp-passkeys' ); ?>
+                        </div>
+                    <?php endif; ?>
 
-                        <?php if ( count( $credentials ) === 1 ) : ?>
-                            <p class="description wpk-notice-warning" style="margin-top:8px;max-width:560px;">
-                                <?php esc_html_e( '⚠ You only have one passkey registered. Add a backup passkey on another device to avoid getting locked out.', 'wp-passkeys' ); ?>
-                            </p>
-                        <?php endif; ?>
-                    </td>
-                </tr>
+                    <table class="wpk-creds-table">
+                        <thead>
+                            <tr>
+                                <th><?php esc_html_e( 'Label', 'wp-passkeys' ); ?></th>
+                                <th><?php esc_html_e( 'Registered', 'wp-passkeys' ); ?></th>
+                                <th><?php esc_html_e( 'Last Used', 'wp-passkeys' ); ?></th>
+                                <?php do_action( 'wpk_profile_table_header', $user ); ?>
+                                <th><?php esc_html_e( 'Action', 'wp-passkeys' ); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ( $credentials as $cred ) : ?>
+                                <tr data-credential-id="<?php echo esc_attr( (string) $cred->id ); ?>">
+                                    <td class="wpk-creds-label">
+                                        <span class="wpk-creds-dot" aria-hidden="true"></span>
+                                        <?php echo esc_html( $cred->credential_label ?: __( 'Passkey', 'wp-passkeys' ) ); ?>
+                                    </td>
+                                    <td><?php echo esc_html( mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $cred->created_at ) ); ?></td>
+                                    <td><?php echo $cred->last_used_at ? esc_html( mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $cred->last_used_at ) ) : esc_html__( 'Never', 'wp-passkeys' ); ?></td>
+                                    <?php do_action( 'wpk_profile_table_row', $cred, $user ); ?>
+                                    <td>
+                                        <button class="wpk-revoke-btn wpk-passkey-revoke" type="button">
+                                            <?php esc_html_e( 'Revoke', 'wp-passkeys' ); ?>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
                 <?php endif; ?>
-            </table>
-        </div>
+
+            </div><!-- .wpk-profile-card -->
+        </div><!-- .wpk-profile-section -->
         <?php
     }
 
