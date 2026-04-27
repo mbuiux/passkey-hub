@@ -69,13 +69,61 @@ function wpk_init() {
 }
 add_action( 'plugins_loaded', 'wpk_init' );
 
+/**
+ * Detect whether the plugin is network-activated.
+ */
+function wpk_is_network_active(): bool {
+    if ( ! is_multisite() ) {
+        return false;
+    }
+
+    $active = (array) get_site_option( 'active_sitewide_plugins', array() );
+    return isset( $active[ plugin_basename( WPK_PLUGIN_FILE ) ] );
+}
+
+/**
+ * Run a callback for current site or across the whole network.
+ */
+function wpk_for_each_site( bool $network_wide, callable $callback ): void {
+    if ( ! is_multisite() || ! $network_wide ) {
+        $callback();
+        return;
+    }
+
+    $original_blog_id = get_current_blog_id();
+
+    $page     = 1;
+    $per_page = 200;
+
+    do {
+        $site_ids = get_sites( array(
+            'fields' => 'ids',
+            'number' => $per_page,
+            'paged'  => $page,
+        ) );
+
+        foreach ( $site_ids as $site_id ) {
+            switch_to_blog( (int) $site_id );
+            $callback();
+            restore_current_blog();
+        }
+
+        $page++;
+    } while ( ! empty( $site_ids ) );
+
+    if ( get_current_blog_id() !== (int) $original_blog_id ) {
+        switch_to_blog( (int) $original_blog_id );
+        restore_current_blog();
+    }
+}
+
 // ──────────────────────────────────────────────────────────────
 // Activation / deactivation
 // ──────────────────────────────────────────────────────────────
 register_activation_hook( __FILE__, 'wpk_activate' );
 register_deactivation_hook( __FILE__, 'wpk_deactivate' );
 
-function wpk_activate() {
+function wpk_activate( bool $network_wide = false ) {
     if ( version_compare( PHP_VERSION, '8.0', '<' ) ) {
         deactivate_plugins( plugin_basename( WPK_PLUGIN_FILE ) );
         wp_die( esc_html__( 'WP Passkey requires PHP 8.0 or higher. Please upgrade PHP before activating this plugin.', 'wp-passkeys' ) );
@@ -84,17 +132,43 @@ function wpk_activate() {
         deactivate_plugins( plugin_basename( WPK_PLUGIN_FILE ) );
         wp_die( esc_html__( 'WP Passkey requires WordPress 6.0 or higher. Please update WordPress before activating this plugin.', 'wp-passkeys' ) );
     }
+
     require_once WPK_PLUGIN_DIR . 'includes/class-wpk-passkeys.php';
-    WPK_Passkeys::create_tables();
-    WPK_Passkeys::schedule_cron();
+
+    wpk_for_each_site( $network_wide, static function (): void {
+        WPK_Passkeys::create_tables();
+        WPK_Passkeys::schedule_cron();
+    } );
+
     flush_rewrite_rules();
 }
 
-function wpk_deactivate() {
+function wpk_deactivate( bool $network_wide = false ) {
     require_once WPK_PLUGIN_DIR . 'includes/class-wpk-passkeys.php';
-    WPK_Passkeys::unschedule_cron();
+
+    wpk_for_each_site( $network_wide, static function (): void {
+        WPK_Passkeys::unschedule_cron();
+    } );
+
     // Nothing else to tear down on deactivation; tables are preserved until uninstall.
 }
+
+/**
+ * Provision plugin tables/cron when a new site is created on multisite.
+ */
+function wpk_multisite_initialize_site( WP_Site $new_site ): void {
+    if ( ! wpk_is_network_active() ) {
+        return;
+    }
+
+    require_once WPK_PLUGIN_DIR . 'includes/class-wpk-passkeys.php';
+
+    switch_to_blog( (int) $new_site->blog_id );
+    WPK_Passkeys::create_tables();
+    WPK_Passkeys::schedule_cron();
+    restore_current_blog();
+}
+add_action( 'wp_initialize_site', 'wpk_multisite_initialize_site' );
 
 // ──────────────────────────────────────────────────────────────
 // Settings link on Plugins page

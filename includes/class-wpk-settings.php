@@ -38,6 +38,10 @@ class WPK_Settings {
             return;
         }
 
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
         if ( empty( $_POST['option_page'] ) ) {
             return;
         }
@@ -488,13 +492,13 @@ class WPK_Settings {
         $shortcodes = array(
             array(
                 'title' => __('Login Form', 'wp-passkeys'),
-                'code' => '[wp_passkey_login]',
+                'code' => '[wpk_login_button]',
                 'description' => __('Display a passkey login form on any page.', 'wp-passkeys'),
                 'placement' => __('Best for custom login pages.', 'wp-passkeys'),
             ),
             array(
                 'title' => __('Register Button', 'wp-passkeys'),
-                'code' => '[wp_passkey_register]',
+                'code' => '[wpk_register_button]',
                 'description' => __('Let signed-in users register a new passkey.', 'wp-passkeys'),
                 'placement' => __('Best for account and onboarding pages.', 'wp-passkeys'),
             ),

@@ -1,6 +1,6 @@
 === WP Passkey ===
 Contributors: markbest
-Tags: passkeys, webauthn, fido2, passwordless, authentication, login, security, biometric
+Tags: passkeys, webauthn, passwordless, login, security
 Requires at least: 6.0
 Tested up to: 6.8
 Stable tag: 1.1.0
@@ -8,7 +8,7 @@ Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Free / Lite version — let users sign in with Face ID, Touch ID, Windows Hello, or a security key, no password required. Upgrade to [WP Passkey Pro](https://wppasskey.com/pro) for unlimited passkeys, WooCommerce integration, audit logs, and more.
+Passwordless passkey login for WordPress using Face ID, Touch ID, Windows Hello, and security keys.
 
 == Description ==
 
@@ -61,18 +61,18 @@ Passkeys are phishing-resistant by design. There is no password to steal, no cre
 1. In your WordPress admin, go to **Plugins > Add New**
 2. Search for **WP Passkey**
 3. Click **Install Now** then **Activate**
-4. Go to **Settings > WP Passkey** and enable passkeys
+4. Go to **Settings > WP Passkeys** and enable passkeys
 
 = Manual installation =
 
 1. Download the plugin ZIP from WordPress.org
 2. Go to **Plugins > Add New > Upload Plugin** and upload the ZIP
 3. Click **Activate**
-4. Go to **Settings > WP Passkey** and enable passkeys
+4. Go to **Settings > WP Passkeys** and enable passkeys
 
 = After activation =
 
-1. Go to **Settings > WP Passkey** — verify passkeys are enabled and select which roles may use them
+1. Go to **Settings > WP Passkeys** — verify passkeys are enabled and select which roles may use them
 2. Visit **Users > Your Profile** and register your first passkey
 3. Sign out and confirm the **Sign in with Passkey** button appears on the login page
 4. Register a backup passkey on a second device to avoid lockout
@@ -101,7 +101,7 @@ Yes, in production. The WebAuthn specification only allows passkey operations ov
 
 = Can I control which user roles can use passkeys? =
 
-Yes — in **Settings > WP Passkey > Eligible Roles**. By default only Administrators. WP Passkey Pro extends this to any role including custom ones.
+Yes — in **Settings > WP Passkeys > Eligible Roles**. By default only Administrators. WP Passkey Pro extends this to any role including custom ones.
 
 = What happens if I deactivate or delete the plugin? =
 
@@ -109,7 +109,7 @@ Deactivation leaves all data intact. Deletion (uninstall) drops the `wp_wpk_cred
 
 = Is the plugin multisite compatible? =
 
-Tables are created per-site (using `$wpdb->prefix`). Network-wide activation is not officially supported in Lite but each sub-site can activate it independently.
+Yes. Tables are created per-site (using `$wpdb->prefix`) and network activation provisions each site. New sites created on a network are automatically provisioned when the plugin is network-active.
 
 = Can I use a custom RP ID for subdomain setups? =
 
@@ -128,7 +128,7 @@ Yes — add `define( 'WPK_RP_ID', 'example.com' );` to `wp-config.php`.
 * Added: dismissible "set up your passkey" nudge notice for eligible users
 * Added: Passkeys column in the admin Users list showing count per user
 * Added: Scheduled daily cleanup of expired rate-limit rows and old log entries
-* Added: Challenge timeout setting in Settings > WP Passkey > Advanced
+* Added: Challenge timeout setting in Settings > WP Passkeys > Advanced
 * Added: Login redirect URL field in settings (fallback after passkey login)
 * Added: `[wpk_login_button]` and `[wpk_register_button]` shortcodes
 * Added: Log retention period setting (days)
@@ -139,5 +139,5 @@ Yes — add `define( 'WPK_RP_ID', 'example.com' );` to `wp-config.php`.
 
 == Upgrade Notice ==
 
-= 1.0.0 =
-Initial release — no upgrade steps required.
+= 1.1.0 =
+Recommended update: improved security hardening, multisite provisioning, and settings reliability.

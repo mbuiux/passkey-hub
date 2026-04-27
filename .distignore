@@ -1,0 +1,27 @@
+# VCS and local editor files
+.git/
+.github/
+.vscode/
+.idea/
+.gitignore
+.distignore
+.DS_Store
+**/.DS_Store
+
+# Local docs not required by WordPress.org runtime package
+README.md
+
+# Composer metadata not required at runtime
+composer.json
+composer.lock
+
+# Dependency package metadata (optional for runtime)
+vendor/**/.gitignore
+vendor/**/README.md
+vendor/**/composer.json
+
+# Common local/test artifacts
+*.log
+phpunit.xml
+phpunit.xml.dist
+tests/

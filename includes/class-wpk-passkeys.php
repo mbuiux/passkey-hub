@@ -303,9 +303,15 @@ class WPK_Passkeys {
     }
 
     public static function unschedule_cron(): void {
+        if ( function_exists( 'wp_clear_scheduled_hook' ) ) {
+            wp_clear_scheduled_hook( 'wpk_scheduled_cleanup' );
+            return;
+        }
+
         $timestamp = wp_next_scheduled( 'wpk_scheduled_cleanup' );
-        if ( $timestamp ) {
+        while ( $timestamp ) {
             wp_unschedule_event( $timestamp, 'wpk_scheduled_cleanup' );
+            $timestamp = wp_next_scheduled( 'wpk_scheduled_cleanup' );
         }
     }
 
@@ -1264,6 +1270,11 @@ class WPK_Passkeys {
     // ──────────────────────────────────────────────────────────
 
     private function get_rate_window(): int {
+        $opt = (int) get_option( 'wpk_rate_limit_window', 0 );
+        if ( $opt >= 60 ) {
+            return min( 3600, $opt );
+        }
+        // Backward compatibility with pre-1.1 option keys.
         $opt = (int) get_option( 'wpk_rate_window', 0 );
         if ( $opt >= 60 ) {
             return min( 3600, $opt );
@@ -1275,6 +1286,11 @@ class WPK_Passkeys {
     }
 
     private function get_rate_max_attempts(): int {
+        $opt = (int) get_option( 'wpk_rate_limit_max_failures', 0 );
+        if ( $opt >= 1 ) {
+            return min( 50, $opt );
+        }
+        // Backward compatibility with pre-1.1 option keys.
         $opt = (int) get_option( 'wpk_rate_max_attempts', 0 );
         if ( $opt >= 1 ) {
             return min( 50, $opt );
@@ -1286,6 +1302,11 @@ class WPK_Passkeys {
     }
 
     private function get_rate_lockout(): int {
+        $opt = (int) get_option( 'wpk_rate_limit_lockout', 0 );
+        if ( $opt >= 60 ) {
+            return min( 86400, $opt );
+        }
+        // Backward compatibility with pre-1.1 option keys.
         $opt = (int) get_option( 'wpk_rate_lockout', 0 );
         if ( $opt >= 60 ) {
             return min( 86400, $opt );
@@ -1366,7 +1387,19 @@ class WPK_Passkeys {
     // ──────────────────────────────────────────────────────────
 
     private function is_secure_context(): bool {
-        return is_ssl() || ( defined( 'WPK_ALLOW_HTTP' ) && WPK_ALLOW_HTTP );
+        if ( is_ssl() ) {
+            return true;
+        }
+
+        // Allow HTTP only for local/dev-style environments when explicitly enabled.
+        if ( defined( 'WPK_ALLOW_HTTP' ) && WPK_ALLOW_HTTP ) {
+            if ( function_exists( 'wp_get_environment_type' ) && wp_get_environment_type() === 'production' ) {
+                return false;
+            }
+            return true;
+        }
+
+        return false;
     }
 
     private function get_client_ip(): string {
@@ -1382,13 +1415,26 @@ class WPK_Passkeys {
             return;
         }
 
+        // Privacy-first logging: strip or pseudonymize fields that can contain PII.
+        if ( isset( $data['user_id'] ) ) {
+            $data['user_ref'] = hash_hmac( 'sha256', (string) absint( $data['user_id'] ), wp_salt( 'auth' ) );
+            unset( $data['user_id'] );
+        }
+
+        foreach ( array( 'message', 'email', 'ip', 'user_agent', 'login', 'username', 'display_name', 'redirect' ) as $sensitive_key ) {
+            if ( isset( $data[ $sensitive_key ] ) ) {
+                unset( $data[ $sensitive_key ] );
+            }
+        }
+
         global $wpdb;
         $wpdb->insert(
             $wpdb->prefix . 'wpk_logs',
             array(
                 'event_type'    => $event,
                 'log_timestamp' => gmdate( 'Y-m-d H:i:s' ),
-                'user_agent'    => sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ?? '' ) ),
+                // Keep user_agent empty to avoid storing browser fingerprinting data.
+                'user_agent'    => '',
                 'log_data'      => wp_json_encode( $data ),
             ),
             array( '%s', '%s', '%s', '%s' )
