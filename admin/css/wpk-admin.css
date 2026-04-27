@@ -987,6 +987,33 @@
 }
 
 /* Login form passkey button: premium black style, same size as SSO button */
+body.login .wpk-login-separator {
+    width: 100%;
+    margin: 14px 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8b949e;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+body.login .wpk-login-separator::before,
+body.login .wpk-login-separator::after {
+    content: "";
+    flex: 1 1 auto;
+    border-top: 1px solid #d8dde3;
+}
+
+body.login .wpk-login-separator span {
+    display: inline-block;
+    padding: 0 10px;
+    line-height: 1;
+    background: #fff;
+}
+
 body.login .wpk-login-passkey-wrap {
     margin-top: 10px;
 }

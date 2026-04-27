@@ -29,11 +29,41 @@ class WPK_Login_Form {
         }
 
         $show_sep = (int) get_option( 'wpk_show_separator', 1 ) === 1;
+
         ?>
+
+        <style id="wpk-login-separator-inline">
+            body.login .wpk-login-separator {
+                width: 100%;
+                margin: 14px 0 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #8b949e;
+                font-size: 12px;
+                font-weight: 600;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+
+            body.login .wpk-login-separator::before,
+            body.login .wpk-login-separator::after {
+                content: "";
+                flex: 1 1 auto;
+                border-top: 1px solid #d8dde3;
+            }
+
+            body.login .wpk-login-separator span {
+                display: inline-block;
+                padding: 0 10px;
+                line-height: 1;
+                background: #fff;
+            }
+        </style>
 
         <?php if ( $show_sep ) : ?>
         <div class="wpk-login-separator" role="separator" aria-label="<?php esc_attr_e( 'or', 'wp-passkeys' ); ?>">
-            <span><?php esc_html_e( 'or', 'wp-passkeys' ); ?></span>
+            <span><?php esc_html_e( 'OR', 'wp-passkeys' ); ?></span>
         </div>
         <?php endif; ?>
 

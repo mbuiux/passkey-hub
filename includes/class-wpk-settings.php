@@ -138,6 +138,12 @@ class WPK_Settings {
             'default' => true,
         ));
 
+        register_setting($this->option_group, 'wpk_show_separator', array(
+            'type' => 'boolean',
+            'sanitize_callback' => array($this, 'sanitize_checkbox'),
+            'default' => true,
+        ));
+
         register_setting($this->option_group, 'wpk_eligible_roles', array(
             'type' => 'array',
             'sanitize_callback' => array($this, 'sanitize_roles'),
@@ -329,6 +335,7 @@ class WPK_Settings {
                         <?php else : ?>
                             <form method="post" action="options.php" class="wpk-settings-form">
                                 <?php settings_fields($this->option_group); ?>
+                                <?php $this->render_preserved_hidden_fields($active_tab); ?>
                                 <?php $active_tab === 'advanced' ? $this->render_advanced_tab() : $this->render_settings_tab(); ?>
                                 <footer class="wpk-form-footer">
                                     <p><?php esc_html_e('Changes apply immediately after saving.', 'wp-passkeys'); ?></p>
@@ -359,6 +366,39 @@ class WPK_Settings {
             esc_url(add_query_arg('tab', $tab, $base_url)),
             esc_html($label)
         );
+    }
+
+    private function render_preserved_hidden_fields($active_tab) {
+        if ($active_tab === 'advanced') {
+            $enabled = (bool) get_option('wpk_enabled', true);
+            $roles = (array) get_option('wpk_eligible_roles', array('administrator'));
+            $max_passkeys = absint(get_option('wpk_max_passkeys_per_user', 5));
+            $verification = get_option('wpk_user_verification', 'required');
+
+            echo '<input type="hidden" name="wpk_enabled" value="' . esc_attr($enabled ? '1' : '0') . '" />';
+            foreach ($roles as $role) {
+                echo '<input type="hidden" name="wpk_eligible_roles[]" value="' . esc_attr(sanitize_key($role)) . '" />';
+            }
+            echo '<input type="hidden" name="wpk_max_passkeys_per_user" value="' . esc_attr((string) $max_passkeys) . '" />';
+            echo '<input type="hidden" name="wpk_user_verification" value="' . esc_attr((string) $verification) . '" />';
+            return;
+        }
+
+        if ($active_tab === 'settings') {
+            $show_separator = (bool) get_option('wpk_show_separator', true);
+            $rp_name = get_option('wpk_rp_name', '');
+            $rp_id = get_option('wpk_rp_id', '');
+            $window = absint(get_option('wpk_rate_limit_window', 300));
+            $max_failures = absint(get_option('wpk_rate_limit_max_failures', 8));
+            $lockout = absint(get_option('wpk_rate_limit_lockout', 900));
+
+            echo '<input type="hidden" name="wpk_show_separator" value="' . esc_attr($show_separator ? '1' : '0') . '" />';
+            echo '<input type="hidden" name="wpk_rp_name" value="' . esc_attr((string) $rp_name) . '" />';
+            echo '<input type="hidden" name="wpk_rp_id" value="' . esc_attr((string) $rp_id) . '" />';
+            echo '<input type="hidden" name="wpk_rate_limit_window" value="' . esc_attr((string) $window) . '" />';
+            echo '<input type="hidden" name="wpk_rate_limit_max_failures" value="' . esc_attr((string) $max_failures) . '" />';
+            echo '<input type="hidden" name="wpk_rate_limit_lockout" value="' . esc_attr((string) $lockout) . '" />';
+        }
     }
 
     private function render_settings_tab() {
@@ -432,6 +472,7 @@ class WPK_Settings {
     }
 
     private function render_advanced_tab() {
+        $show_separator = (bool) get_option('wpk_show_separator', true);
         $rp_name = get_option('wpk_rp_name', '');
         $rp_id = get_option('wpk_rp_id', '');
         $window = absint(get_option('wpk_rate_limit_window', 300));
@@ -444,6 +485,18 @@ class WPK_Settings {
                 <h2><?php esc_html_e('Technical configuration', 'wp-passkeys'); ?></h2>
             </div>
         </section>
+
+        <div class="wpk-card wpk-card--setting">
+            <div class="wpk-setting-copy">
+                <h3><?php esc_html_e('Show login OR separator', 'wp-passkeys'); ?></h3>
+                <p><?php esc_html_e('Display the centered OR divider above the passkey button on wp-login.php.', 'wp-passkeys'); ?></p>
+            </div>
+            <label class="wpk-switch">
+                <input type="checkbox" name="wpk_show_separator" value="1" <?php checked($show_separator); ?> />
+                <span class="wpk-switch__track"><span class="wpk-switch__thumb"></span></span>
+                <span class="screen-reader-text"><?php esc_html_e('Show login OR separator', 'wp-passkeys'); ?></span>
+            </label>
+        </div>
 
         <div class="wpk-card wpk-grid-2">
             <div class="wpk-field">
