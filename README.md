@@ -195,8 +195,6 @@ This honours `.gitignore` and excludes `vendor/` test directories.
 - No sensitive data (private keys, passwords) is ever stored or logged.
 - The WebAuthn library (`lbuchs/webauthn`) handles all cryptographic operations.
 
-To report a security vulnerability please email **security@wppasskey.com** rather than opening a public issue.
-
 ---
 
 ## Changelog
