@@ -43,6 +43,7 @@ function wpk_uninstall_cleanup_current_blog(): void {
         'wpk_login_redirect',
         'wpk_log_retention_days',
         'wpk_rp_name',
+        'wpk_credentials_schema_v2',
     );
 
     foreach ( $options as $option ) {

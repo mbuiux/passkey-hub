@@ -69,6 +69,12 @@ class WPK_Passkeys {
 
         self::$instance = $this;
 
+        // One-time schema patch: remove raw AAGUID storage from the shared credentials table.
+        if ( is_admin() && current_user_can( 'manage_options' ) && (int) get_option( 'wpk_credentials_schema_v2', 0 ) !== 1 ) {
+            self::ensure_credentials_schema_v2();
+            update_option( 'wpk_credentials_schema_v2', 1, false );
+        }
+
         // Profile hooks
         add_action( 'show_user_profile', array( $this, 'render_profile_section' ) );
         add_action( 'edit_user_profile', array( $this, 'render_profile_section' ) );
@@ -124,7 +130,6 @@ class WPK_Passkeys {
             sign_count           BIGINT(20) UNSIGNED DEFAULT 0,
             transports           VARCHAR(191) DEFAULT NULL,
             credential_label     VARCHAR(191) DEFAULT 'Passkey',
-            aaguid               VARCHAR(191) DEFAULT NULL,
             backed_up            TINYINT(1) DEFAULT 0,
             created_at           DATETIME NOT NULL,
             last_used_at         DATETIME DEFAULT NULL,
@@ -162,6 +167,25 @@ class WPK_Passkeys {
         dbDelta( $sql_credentials );
         dbDelta( $sql_rate );
         dbDelta( $sql_logs );
+
+        self::ensure_credentials_schema_v2();
+        update_option( 'wpk_credentials_schema_v2', 1, false );
+    }
+
+    private static function ensure_credentials_schema_v2(): void {
+        global $wpdb;
+
+        $table = $wpdb->prefix . self::TABLE_CREDENTIALS;
+        $like  = $wpdb->esc_like( $table );
+        $row   = (string) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $like ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+        if ( $row !== $table ) {
+            return;
+        }
+
+        $column = $wpdb->get_var( $wpdb->prepare( "SHOW COLUMNS FROM {$table} LIKE %s", 'aaguid' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        if ( ! empty( $column ) ) {
+            $wpdb->query( "ALTER TABLE {$table} DROP COLUMN aaguid" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        }
     }
 
     public static function drop_tables(): void {
@@ -203,7 +227,7 @@ class WPK_Passkeys {
             return;
         }
 
-        if ( $this->count_user_credentials( (int) $user->ID ) > 0 ) {
+        if ( $this->has_any_user_credentials( (int) $user->ID ) ) {
             return;
         }
 
@@ -419,9 +443,10 @@ class WPK_Passkeys {
             return;
         }
 
-        $credentials  = $this->get_user_credentials_meta( (int) $user->ID );
-        $max_passkeys = $this->get_max_passkeys_per_user( $user );
-        $at_limit     = count( $credentials ) >= $max_passkeys;
+        $credentials   = $this->get_user_credentials_meta( (int) $user->ID );
+        $max_passkeys  = $this->get_max_passkeys_per_user( $user );
+        $at_limit      = count( $credentials ) >= $max_passkeys;
+        $max_display   = $max_passkeys >= 999999 ? __( 'unlimited', 'passkey-hub' ) : (string) $max_passkeys;
         ?>
         <div class="wpk-profile-section" id="wpk-profile-section">
 
@@ -431,7 +456,7 @@ class WPK_Passkeys {
                     <p><?php esc_html_e( 'Sign in with your fingerprint, face, or a hardware security key — no password needed.', 'passkey-hub' ); ?></p>
                 </div>
                 <span class="wpk-profile-count">
-                    <?php echo esc_html( count( $credentials ) ); ?>&thinsp;/&thinsp;<?php echo esc_html( $max_passkeys ); ?>
+                    <?php echo esc_html( count( $credentials ) ); ?>&thinsp;/&thinsp;<?php echo esc_html( $max_display ); ?>
                     <span class="wpk-profile-count-label"><?php esc_html_e( 'passkeys', 'passkey-hub' ); ?></span>
                 </span>
             </div>
@@ -714,13 +739,12 @@ class WPK_Passkeys {
                     'sign_count'           => (int) ( $result->signatureCounter ?: 0 ),
                     'transports'           => $transports,
                     'credential_label'     => $label,
-                    'aaguid'               => ! empty( $result->AAGUID ) ? bin2hex( (string) $result->AAGUID ) : null,
                     'backed_up'            => ! empty( $result->isBackedUp ) ? 1 : 0,
                     'created_at'           => gmdate( 'Y-m-d H:i:s' ),
                     'last_used_at'         => null,
                     'revoked_at'           => null,
                 ),
-                array( '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%s' )
+                array( '%d', '%s', '%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s', '%s' )
             );
 
             if ( $wpdb->last_error ) {
@@ -1258,6 +1282,34 @@ class WPK_Passkeys {
         $table = $wpdb->prefix . self::TABLE_CREDENTIALS;
         return (int) $wpdb->get_var( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
             "SELECT COUNT(*) FROM {$table} WHERE user_id = %d AND revoked_at IS NULL", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            $user_id
+        ) );
+    }
+
+    /**
+     * Suppress setup nudge when credentials exist in Lite or legacy Pro table.
+     */
+    private function has_any_user_credentials( int $user_id ): bool {
+        if ( $this->count_user_credentials( $user_id ) > 0 ) {
+            return true;
+        }
+
+        return $this->count_user_credentials_in_table( $user_id, 'wpkpro_credentials' ) > 0;
+    }
+
+    private function count_user_credentials_in_table( int $user_id, string $table_suffix ): int {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . $table_suffix;
+        $like       = $wpdb->esc_like( $table_name );
+        $exists     = (string) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $like ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+
+        if ( $exists !== $table_name ) {
+            return 0;
+        }
+
+        return (int) $wpdb->get_var( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+            "SELECT COUNT(*) FROM {$table_name} WHERE user_id = %d AND revoked_at IS NULL", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             $user_id
         ) );
     }
