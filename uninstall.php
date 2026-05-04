@@ -14,15 +14,45 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 global $wpdb;
 
 /**
+ * Determine whether Passkey Hub Pro is currently active.
+ *
+ * When Pro is active, it uses shared credentials in wp_wpk_credentials,
+ * so Lite uninstall must not drop shared authentication data.
+ */
+function wpk_uninstall_is_pro_active(): bool {
+    $pro_basename = 'passkey-hub-pro/passkey-hub-pro.php';
+
+    $active_plugins = (array) get_option( 'active_plugins', array() );
+    if ( in_array( $pro_basename, $active_plugins, true ) ) {
+        return true;
+    }
+
+    if ( is_multisite() ) {
+        $network_active = (array) get_site_option( 'active_sitewide_plugins', array() );
+        if ( isset( $network_active[ $pro_basename ] ) ) {
+            return true;
+        }
+    }
+
+    return (int) get_option( 'wpkpro_enabled', 0 ) === 1;
+}
+
+/**
  * Remove all plugin data from the current blog context.
  */
 function wpk_uninstall_cleanup_current_blog(): void {
     global $wpdb;
 
+    $pro_active = wpk_uninstall_is_pro_active();
+
     // Drop custom tables
-    $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'wpk_credentials' );    // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+    if ( ! $pro_active ) {
+        $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'wpk_credentials' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+    }
     $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'wpk_rate_limits' );    // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-    $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'wpk_logs' );           // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+    if ( ! $pro_active ) {
+        $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'wpk_logs' );        // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+    }
 
     // Remove all plugin options
     $options = array(
