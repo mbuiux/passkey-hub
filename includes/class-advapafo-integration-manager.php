@@ -239,6 +239,7 @@ class ADVAPAFO_Integration_Manager {
 		register_block_type(
 			'advanced-passkey-login/login-button',
 			array(
+				'api_version'     => 3,
 				'editor_script'   => 'advapafo-gutenberg-blocks',
 				'editor_style'    => 'advapafo-gutenberg-blocks',
 				'title'           => __( 'Passkey Login Button', 'advanced-passkey-login' ),
@@ -322,6 +323,7 @@ class ADVAPAFO_Integration_Manager {
 		register_block_type(
 			'advanced-passkey-login/register-button',
 			array(
+				'api_version'     => 3,
 				'editor_script'   => 'advapafo-gutenberg-blocks',
 				'editor_style'    => 'advapafo-gutenberg-blocks',
 				'title'           => __( 'Passkey Register Button', 'advanced-passkey-login' ),
@@ -380,6 +382,7 @@ class ADVAPAFO_Integration_Manager {
 		register_block_type(
 			'advanced-passkey-login/passkey-profile',
 			array(
+				'api_version'     => 3,
 				'editor_script'   => 'advapafo-gutenberg-blocks',
 				'editor_style'    => 'advapafo-gutenberg-blocks',
 				'title'           => __( 'Account Passkeys', 'advanced-passkey-login' ),
@@ -407,6 +410,7 @@ class ADVAPAFO_Integration_Manager {
 		register_block_type(
 			'advanced-passkey-login/setup-prompt',
 			array(
+				'api_version'     => 3,
 				'editor_script'   => 'advapafo-gutenberg-blocks',
 				'editor_style'    => 'advapafo-gutenberg-blocks',
 				'title'           => __( 'Passkey Setup Prompt', 'advanced-passkey-login' ),
@@ -568,6 +572,7 @@ class ADVAPAFO_Integration_Manager {
 		register_block_type(
 			$block_name,
 			array(
+				'api_version'     => 3,
 				'editor_script'   => 'advapafo-gutenberg-blocks',
 				'editor_style'    => 'advapafo-gutenberg-blocks',
 				'title'           => $this->get_integration_block_title( $integration_key ),

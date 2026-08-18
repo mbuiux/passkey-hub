@@ -2,8 +2,8 @@
 Contributors: wppasskey, mbuiux
 Tags: passkeys, webauthn, passwordless, login, security
 Requires at least: 6.0
-Tested up to: 7.0
-Stable tag: 1.1.12
+Tested up to: 7.1
+Stable tag: 1.1.13
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -209,6 +209,10 @@ For automated environments that favor infrastructure-level array maps, define th
 7. The returning user login state demonstrating the Last used device indicator pill for returning passkey users.
 
 == Changelog ==
+
+= 1.1.13 =
+* Confirmed compatibility with WordPress 7.1.
+* Fixed: Gutenberg blocks now declare `api_version` 3 so they render without deprecation warnings in the persistent iframe post editor introduced in WordPress 7.1.
 
 = 1.1.11 =
 * Improved: username-free passkey sign-in now shows clearer fallback guidance when a browser or authenticator does not support discoverable credentials.
