@@ -2814,7 +2814,13 @@ class ADVAPAFO_Passkeys {
 			unset( $data['user_id'] );
 		}
 
-		foreach ( array( 'message', 'email', 'ip', 'user_agent', 'login', 'username', 'display_name', 'redirect' ) as $sensitive_key ) {
+		$ip_candidate = isset( $data['ip'] ) ? (string) $data['ip'] : $this->get_client_ip();
+		$ip_metadata  = $this->build_ip_log_metadata( $ip_candidate );
+		if ( ! empty( $ip_metadata ) ) {
+			$data = array_merge( $data, $ip_metadata );
+		}
+
+		foreach ( array( 'message', 'email', 'ip', 'ip_address', 'client_ip', 'remote_addr', 'user_agent', 'login', 'username', 'display_name', 'redirect' ) as $sensitive_key ) {
 			if ( isset( $data[ $sensitive_key ] ) ) {
 				unset( $data[ $sensitive_key ] );
 			}
@@ -2842,5 +2848,62 @@ class ADVAPAFO_Passkeys {
 			),
 			array( '%s', '%s', '%s', '%s' )
 		);
+	}
+
+	/**
+	 * Build a privacy-safe, masked IP payload for audit logging.
+	 *
+	 * @param string $ip_raw Raw client IP address.
+	 * @return array<string, string>
+	 */
+	private function build_ip_log_metadata( string $ip_raw ): array {
+		$ip_raw = sanitize_text_field( $ip_raw );
+		if ( in_array( $ip_raw, array( '0.0.0.0', '::', '::0' ), true ) ) {
+			return array();
+		}
+
+		if ( '' === $ip_raw || ! filter_var( $ip_raw, FILTER_VALIDATE_IP ) ) {
+			return array();
+		}
+
+		$masked = $this->mask_ip_for_logging( $ip_raw );
+		if ( '' === $masked ) {
+			return array();
+		}
+
+		return array(
+			'ip_masked' => $masked,
+			'ip_hash'   => hash_hmac( 'sha256', $ip_raw, wp_salt( 'auth' ) ),
+		);
+	}
+
+	/**
+	 * Zero out the host portion of an IP address for privacy-safe display.
+	 *
+	 * @param string $ip IP address.
+	 * @return string
+	 */
+	private function mask_ip_for_logging( string $ip ): string {
+		if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
+			$parts = explode( '.', $ip );
+			if ( count( $parts ) === 4 ) {
+				$parts[3] = '0';
+				return implode( '.', $parts );
+			}
+			return '';
+		}
+
+		if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
+			$binary = @inet_pton( $ip ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- inet_pton() emits a warning on malformed input we've already loosely validated.
+			if ( false === $binary || strlen( $binary ) !== 16 ) {
+				return '';
+			}
+
+			$masked_binary = substr( $binary, 0, 8 ) . str_repeat( "\x00", 8 );
+			$masked_ip     = @inet_ntop( $masked_binary ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- inet_ntop() emits a warning on malformed input we've already loosely validated.
+			return is_string( $masked_ip ) ? $masked_ip : '';
+		}
+
+		return '';
 	}
 }

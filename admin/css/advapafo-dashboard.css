@@ -816,11 +816,13 @@
     margin: 22px 28px;
 }
 
-.wpkpro-main-panel > .wpkpro-card {
+.wpkpro-main-panel > .wpkpro-card,
+.advapafo-main-panel > .wpkpro-card {
     margin: 22px 28px;
 }
 
-.wpkpro-main-panel > .wpkpro-flash {
+.wpkpro-main-panel > .wpkpro-flash,
+.advapafo-main-panel > .wpkpro-flash {
     margin: 22px 28px;
 }
 
@@ -828,7 +830,8 @@
     margin: 22px 28px;
 }
 
-.wpkpro-main-panel > .wpkpro-section-header + .wpkpro-card {
+.wpkpro-main-panel > .wpkpro-section-header + .wpkpro-card,
+.advapafo-main-panel > .wpkpro-section-header + .wpkpro-card {
     margin: 22px 28px;
 }
 
@@ -2419,7 +2422,9 @@
     .wpkpro-audit-stats-grid,
     .wpkpro-dashboard-grid,
     .wpkpro-main-panel > .wpkpro-card,
-    .wpkpro-main-panel > .wpkpro-section-header + .wpkpro-card {
+    .wpkpro-main-panel > .wpkpro-section-header + .wpkpro-card,
+    .advapafo-main-panel > .wpkpro-card,
+    .advapafo-main-panel > .wpkpro-section-header + .wpkpro-card {
         margin: 16px;
     }
 

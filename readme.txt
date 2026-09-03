@@ -3,7 +3,7 @@ Contributors: wppasskey, mbuiux
 Tags: passkeys, webauthn, passwordless, login, security
 Requires at least: 6.0
 Tested up to: 7.1
-Stable tag: 1.1.13
+Stable tag: 1.1.14
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -41,6 +41,7 @@ Don't settle for basic alternatives that only support the default backend login 
 * **Developer-Managed Overrides:** Manage passkey settings in PHP using the centralized `advapafo_local_configuration` filter or the `ADVAPAFO_SETTINGS` constant.
 * **Theme Template Customization:** Seamlessly match your active brand by overriding the login button template layout via `/advanced-passkeys/login/button.php` inside your child theme.
 * **Advanced Analytics Dashboard:** Track credential performance over time with a live Authenticator Overview breakdown card and a Last Login audit trail log.
+* **Full Audit Log:** A dedicated Audit Log tab with searchable, sortable, and filterable paginated login-activity history and a per-provider authenticator usage breakdown.
 * **Hardened Brute-Force Rate Limiting:** Enforce strict local connection limits to log and block malicious behavior, backed by automated daily cleanup crons to keep your database lean.
 * **Multisite Network Provisioning:** Network-aware architecture instantly partitions tables dynamically and inherits security guardrails across newly deployed network sites.
 * **Clean Housekeeping Routine:** Implements a strict, responsible uninstall function that leaves behind absolutely zero orphaned database tables or leftover configuration choices.
@@ -209,6 +210,11 @@ For automated environments that favor infrastructure-level array maps, define th
 7. The returning user login state demonstrating the Last used device indicator pill for returning passkey users.
 
 == Changelog ==
+
+= 1.1.14 =
+* Added: dedicated Audit Log tab with KPI stats, a per-provider authenticator usage table, and a searchable, sortable, filterable, paginated login-activity table.
+* Added: privacy-safe masked IP address logging (last IPv4 octet / IPv6 host bits zeroed) so audit log entries include IP context without ever storing a raw IP.
+* Fixed: settings screen card spacing so tab content no longer appears nested flush against the panel edges.
 
 = 1.1.13 =
 * Confirmed compatibility with WordPress 7.1.

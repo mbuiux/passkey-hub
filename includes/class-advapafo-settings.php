@@ -288,7 +288,7 @@ class ADVAPAFO_Settings {
 		}
 
 		$active_tab = $this->resolve_active_tab();
-		if ( 'dashboard' !== $active_tab ) {
+		if ( ! in_array( $active_tab, array( 'dashboard', 'audit' ), true ) ) {
 			return;
 		}
 
@@ -300,6 +300,20 @@ class ADVAPAFO_Settings {
 				array( 'advapafo-admin' ),
 				$version
 			);
+		}
+
+		if ( 'audit' === $active_tab ) {
+			$admin_table_js = plugin_dir_path( __DIR__ ) . 'admin/js/advapafo-admin-table.js';
+			if ( file_exists( $admin_table_js ) ) {
+				wp_enqueue_script(
+					'advapafo-admin-table',
+					ADVAPAFO_PLUGIN_URL . 'admin/js/advapafo-admin-table.js',
+					array(),
+					$version,
+					true
+				);
+			}
+			return;
 		}
 
 		$apexcharts_js   = plugin_dir_path( __DIR__ ) . 'admin/vendor/apexcharts/apexcharts.min.js';
@@ -698,15 +712,19 @@ class ADVAPAFO_Settings {
 
 				<nav class="advapafo-tabs" aria-label="<?php esc_attr_e( 'Advanced Passkeys for Secure Login settings tabs', 'advanced-passkey-login' ); ?>">
 					<?php $this->render_tab_link( $base_url, 'dashboard', __( 'Dashboard', 'advanced-passkey-login' ), $active_tab ); ?>
+					<?php $this->render_tab_link( $base_url, 'audit', __( 'Audit Log', 'advanced-passkey-login' ), $active_tab ); ?>
 					<?php $this->render_tab_link( $base_url, 'settings', __( 'Settings', 'advanced-passkey-login' ), $active_tab ); ?>
 					<?php $this->render_tab_link( $base_url, 'advanced', __( 'Advanced', 'advanced-passkey-login' ), $active_tab ); ?>
 					<?php $this->render_tab_link( $base_url, 'shortcodes', __( 'Shortcodes', 'advanced-passkey-login' ), $active_tab ); ?>
 				</nav>
 
-				<div class="advapafo-layout<?php echo esc_attr( 'dashboard' === $active_tab ? ' advapafo-layout--dashboard' : ( $show_quick_setup ? '' : ' advapafo-layout--full' ) ); ?>">
+				<?php $is_full_width_tab = in_array( $active_tab, array( 'dashboard', 'audit' ), true ); ?>
+				<div class="advapafo-layout<?php echo esc_attr( $is_full_width_tab ? ' advapafo-layout--dashboard' : ( $show_quick_setup ? '' : ' advapafo-layout--full' ) ); ?>">
 					<main class="advapafo-main-panel">
 						<?php if ( 'dashboard' === $active_tab ) : ?>
 							<?php $this->render_dashboard_tab(); ?>
+						<?php elseif ( 'audit' === $active_tab ) : ?>
+							<?php $this->render_audit_tab(); ?>
 						<?php elseif ( 'shortcodes' === $active_tab ) : ?>
 							<?php $this->render_shortcodes_tab(); ?>
 						<?php else : ?>
@@ -722,7 +740,7 @@ class ADVAPAFO_Settings {
 						<?php endif; ?>
 					</main>
 
-					<?php if ( 'dashboard' !== $active_tab && $show_quick_setup ) : ?>
+					<?php if ( ! $is_full_width_tab && $show_quick_setup ) : ?>
 					<aside class="advapafo-sidebar" aria-label="<?php esc_attr_e( 'Advanced Passkeys for Secure Login quick actions', 'advanced-passkey-login' ); ?>">
 						<?php $this->render_sidebar_cards( $active_tab ); ?>
 					</aside>
@@ -765,7 +783,7 @@ class ADVAPAFO_Settings {
 	 * @return string
 	 */
 	private function resolve_active_tab() {
-		$allowed_tabs = array( 'dashboard', 'settings', 'advanced', 'shortcodes' );
+		$allowed_tabs = array( 'dashboard', 'audit', 'settings', 'advanced', 'shortcodes' );
 		$raw_tab      = filter_input( INPUT_GET, 'tab', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
 
 		if ( ! is_string( $raw_tab ) || '' === $raw_tab ) {
@@ -1373,6 +1391,381 @@ class ADVAPAFO_Settings {
 	}
 
 	/**
+	 * Render the full audit log tab: KPIs, authenticator usage, and paginated login activity.
+	 */
+	private function render_audit_tab() {
+		global $wpdb;
+
+		$credentials_table        = $this->get_credentials_table_for_audit();
+		$activity_logging_enabled = $this->is_activity_logging_enabled();
+
+		$users_with_passkeys = 0;
+		$passkeys_total      = 0;
+		if ( '' !== $credentials_table ) {
+			$credentials_table_sql = $this->quote_table_name( $credentials_table );
+			if ( '' !== $credentials_table_sql ) {
+				$users_with_passkeys = (int) $wpdb->get_var( 'SELECT COUNT(DISTINCT user_id) FROM ' . $credentials_table_sql . ' WHERE revoked_at IS NULL' ); // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- table identifier is strict-validated by quote_table_name().
+				$passkeys_total      = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . $credentials_table_sql . ' WHERE revoked_at IS NULL' ); // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- table identifier is strict-validated by quote_table_name().
+			}
+		}
+
+		$passkey_logins   = $this->count_combined_login_event( 'login_success' );
+		$password_logins  = $this->count_combined_login_event( 'login_password_success' );
+		$blocked_attempts = $this->count_combined_login_event( 'login_password_blocked_passkey_only' );
+		$bypassed_logins  = $this->count_combined_login_event( 'login_bypass_cookie_used' );
+
+		$authenticator_rows = array();
+		if ( '' !== $credentials_table ) {
+			$credentials_table_sql = $this->quote_table_name( $credentials_table );
+			$rows                  = array();
+			if ( '' !== $credentials_table_sql ) {
+				$rows = $wpdb->get_results( // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- table identifier is strict-validated by quote_table_name().
+					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- table identifier is strict-validated by quote_table_name().
+					'SELECT COALESCE(NULLIF(TRIM(credential_label), ""), "") AS credential_label, COALESCE(NULLIF(TRIM(credential_id_hash), ""), "") AS credential_hash, COUNT(*) AS total FROM ' . $credentials_table_sql . ' WHERE revoked_at IS NULL GROUP BY credential_label, credential_id_hash ORDER BY total DESC LIMIT 300',
+					ARRAY_A
+				);
+			}
+
+			$grouped = array();
+			foreach ( $rows as $row ) {
+				$raw_label       = (string) ( $row['credential_label'] ?? '' );
+				$credential_hash = strtolower( trim( (string) ( $row['credential_hash'] ?? '' ) ) );
+				$raw_provider    = '';
+				$raw_aaguid      = '';
+
+				if ( '' !== $credential_hash ) {
+					$raw_provider = $this->lookup_credential_provider_hint_for_hash( $credential_hash );
+					$raw_aaguid   = $this->lookup_credential_aaguid_for_hash( $credential_hash );
+				}
+
+				$provider_meta = $this->resolve_authenticator_metadata_for_reporting( $raw_provider, $raw_label, $raw_aaguid );
+				$provider      = (string) ( $provider_meta['label'] ?? 'Unknown Authenticator' );
+				if ( ! isset( $grouped[ $provider ] ) ) {
+					$grouped[ $provider ] = 0;
+				}
+				$grouped[ $provider ] += (int) ( $row['total'] ?? 0 );
+			}
+
+			arsort( $grouped );
+			foreach ( $grouped as $provider => $total ) {
+				$authenticator_rows[] = array(
+					'provider' => (string) $provider,
+					'total'    => (int) $total,
+				);
+			}
+		}
+
+		$audit_per_page    = 50;
+		$audit_page        = isset( $_GET['advapafo_audit_page'] ) ? max( 1, absint( wp_unslash( $_GET['advapafo_audit_page'] ) ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only pagination cursor on an admin-only screen; tab access itself is nonce-verified by resolve_active_tab().
+		$audit_total_rows  = $this->count_combined_audit_login_rows();
+		$audit_total_pages = max( 1, (int) ceil( $audit_total_rows / $audit_per_page ) );
+		if ( $audit_page > $audit_total_pages ) {
+			$audit_page = $audit_total_pages;
+		}
+		$audit_offset = ( $audit_page - 1 ) * $audit_per_page;
+		$login_rows   = $this->get_combined_audit_login_rows( $audit_per_page, $audit_offset );
+
+		$audit_start = 0;
+		$audit_end   = 0;
+		if ( $audit_total_rows > 0 ) {
+			$audit_start = $audit_offset + 1;
+			$audit_end   = min( $audit_offset + count( $login_rows ), $audit_total_rows );
+		}
+
+		$audit_pagination_links = array();
+		if ( $audit_total_pages > 1 ) {
+			$audit_page_base = wp_nonce_url(
+				add_query_arg(
+					array(
+						'page'                => $this->page_slug,
+						'tab'                 => 'audit',
+						'advapafo_audit_page' => '%#%',
+					),
+					admin_url( 'options-general.php' )
+				),
+				'advapafo_tab_audit',
+				'advapafo_tab_nonce'
+			);
+
+			$audit_pagination_links = paginate_links(
+				array(
+					'base'      => $audit_page_base,
+					'format'    => '',
+					'current'   => $audit_page,
+					'total'     => $audit_total_pages,
+					'type'      => 'array',
+					'prev_text' => __( 'Previous', 'advanced-passkey-login' ),
+					'next_text' => __( 'Next', 'advanced-passkey-login' ),
+				)
+			);
+		}
+		?>
+		<section class="wpkpro-section-header">
+			<div>
+				<p class="wpkpro-eyebrow"><?php esc_html_e( 'Audit', 'advanced-passkey-login' ); ?></p>
+				<h2><?php esc_html_e( 'Full audit log', 'advanced-passkey-login' ); ?></h2>
+			</div>
+		</section>
+
+		<div class="wpkpro-audit-stats-grid wpkpro-audit-stats-grid--login-kpis">
+			<article class="wpkpro-audit-stat wpkpro-audit-stat--users">
+				<h3><?php esc_html_e( 'Users with passkeys', 'advanced-passkey-login' ); ?></h3>
+				<p><?php echo esc_html( number_format_i18n( $users_with_passkeys ) ); ?></p>
+			</article>
+			<article class="wpkpro-audit-stat wpkpro-audit-stat--passkeys">
+				<h3><?php esc_html_e( 'Passkeys stored', 'advanced-passkey-login' ); ?></h3>
+				<p><?php echo esc_html( number_format_i18n( $passkeys_total ) ); ?></p>
+			</article>
+			<article class="wpkpro-audit-stat wpkpro-audit-stat--passkey-logins">
+				<h3><?php esc_html_e( 'Logins with passkey', 'advanced-passkey-login' ); ?></h3>
+				<p><?php echo esc_html( number_format_i18n( $passkey_logins ) ); ?></p>
+			</article>
+			<article class="wpkpro-audit-stat wpkpro-audit-stat--password-logins">
+				<h3><?php esc_html_e( 'Password logins', 'advanced-passkey-login' ); ?></h3>
+				<p><?php echo esc_html( number_format_i18n( $password_logins ) ); ?></p>
+			</article>
+			<article class="wpkpro-audit-stat wpkpro-audit-stat--blocked-attempts">
+				<h3><?php esc_html_e( 'Blocked attempts', 'advanced-passkey-login' ); ?></h3>
+				<p><?php echo esc_html( number_format_i18n( $blocked_attempts ) ); ?></p>
+			</article>
+			<article class="wpkpro-audit-stat wpkpro-audit-stat--bypassed-logins">
+				<h3><?php esc_html_e( 'Bypassed logins', 'advanced-passkey-login' ); ?></h3>
+				<p><?php echo esc_html( number_format_i18n( $bypassed_logins ) ); ?></p>
+			</article>
+		</div>
+
+		<div class="wpkpro-card">
+			<div class="wpkpro-card__header">
+				<div>
+					<h3><?php esc_html_e( 'Authenticator Usage', 'advanced-passkey-login' ); ?></h3>
+					<p><?php esc_html_e( 'Most-used authenticators grouped by normalized provider.', 'advanced-passkey-login' ); ?></p>
+				</div>
+				<div class="wpkpro-audit-search-wrap">
+					<label for="advapafo-authenticator-search" class="screen-reader-text"><?php esc_html_e( 'Search authenticator table', 'advanced-passkey-login' ); ?></label>
+					<input id="advapafo-authenticator-search" class="wpkpro-audit-search" type="search" data-table-target="advapafo-authenticator-table" placeholder="<?php esc_attr_e( 'Search authenticators...', 'advanced-passkey-login' ); ?>" />
+				</div>
+			</div>
+			<div class="wpkpro-card__body">
+				<div class="wpkpro-audit-table-wrap">
+					<table id="advapafo-authenticator-table" class="wpkpro-audit-table widefat striped" data-enhanced-table="1">
+						<thead>
+							<tr>
+								<th scope="col" data-sort="text"><?php esc_html_e( 'Provider', 'advanced-passkey-login' ); ?></th>
+								<th scope="col" data-sort="number"><?php esc_html_e( 'Count', 'advanced-passkey-login' ); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php if ( empty( $authenticator_rows ) ) : ?>
+								<tr><td colspan="2"><?php esc_html_e( 'No authenticator data available yet.', 'advanced-passkey-login' ); ?></td></tr>
+							<?php else : ?>
+								<?php foreach ( $authenticator_rows as $row ) : ?>
+									<tr>
+										<td><?php echo $this->render_authenticator_provider_badge( (string) $row['provider'], array( 'provider_key' => $this->normalize_authenticator_provider_key( (string) $row['provider'] ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- render_authenticator_provider_badge() returns sanitized badge HTML. ?></td>
+										<td><?php echo esc_html( number_format_i18n( (int) $row['total'] ) ); ?></td>
+									</tr>
+								<?php endforeach; ?>
+							<?php endif; ?>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<div class="wpkpro-card">
+			<div class="wpkpro-card__header">
+				<div>
+					<h3><?php esc_html_e( 'Detailed Login Activity', 'advanced-passkey-login' ); ?></h3>
+					<p><?php esc_html_e( 'Latest passkey and password login events.', 'advanced-passkey-login' ); ?></p>
+				</div>
+				<?php if ( $activity_logging_enabled ) : ?>
+				<div class="wpkpro-audit-controls">
+					<div class="wpkpro-audit-search-wrap">
+						<label for="advapafo-login-search" class="screen-reader-text"><?php esc_html_e( 'Search login activity table', 'advanced-passkey-login' ); ?></label>
+						<input id="advapafo-login-search" class="wpkpro-audit-search" type="search" data-table-target="advapafo-login-activity-table" placeholder="<?php esc_attr_e( 'Search login activity...', 'advanced-passkey-login' ); ?>" />
+					</div>
+					<div class="wpkpro-audit-filter-wrap">
+						<label for="advapafo-login-method-filter" class="screen-reader-text"><?php esc_html_e( 'Filter login activity by method', 'advanced-passkey-login' ); ?></label>
+						<select id="advapafo-login-method-filter" class="wpkpro-audit-filter" data-table-filter-target="advapafo-login-activity-table" data-table-filter-key="methodKey">
+							<option value="all"><?php esc_html_e( 'All Methods', 'advanced-passkey-login' ); ?></option>
+							<option value="passkey"><?php esc_html_e( 'Passkey', 'advanced-passkey-login' ); ?></option>
+							<option value="password"><?php esc_html_e( 'Password', 'advanced-passkey-login' ); ?></option>
+							<option value="other"><?php esc_html_e( 'Other', 'advanced-passkey-login' ); ?></option>
+						</select>
+					</div>
+				</div>
+				<?php endif; ?>
+			</div>
+			<div class="wpkpro-card__body">
+				<?php if ( ! $activity_logging_enabled ) : ?>
+					<div class="wpkpro-flash wpkpro-flash--warning" role="status">
+						<p><?php esc_html_e( 'Activity logging has been disabled. Re-enable it in the Advanced tab to restore login activity charts and detailed audit rows.', 'advanced-passkey-login' ); ?></p>
+					</div>
+				<?php else : ?>
+				<p class="description">
+					<?php
+					if ( $audit_total_rows > 0 ) {
+						printf(
+							/* translators: 1: first visible row number, 2: last visible row number, 3: total rows */
+							esc_html__( 'Showing %1$s-%2$s of %3$s events.', 'advanced-passkey-login' ),
+							esc_html( number_format_i18n( $audit_start ) ),
+							esc_html( number_format_i18n( $audit_end ) ),
+							esc_html( number_format_i18n( $audit_total_rows ) )
+						);
+					} else {
+						esc_html_e( 'No events found.', 'advanced-passkey-login' );
+					}
+					?>
+				</p>
+				<div class="wpkpro-audit-table-wrap">
+					<table id="advapafo-login-activity-table" class="wpkpro-audit-table widefat striped" data-enhanced-table="1">
+						<thead>
+							<tr>
+								<th scope="col" data-sort="number"><?php esc_html_e( 'ID', 'advanced-passkey-login' ); ?></th>
+								<th scope="col" data-sort="text"><?php esc_html_e( 'Method', 'advanced-passkey-login' ); ?></th>
+								<th scope="col" data-sort="text"><?php esc_html_e( 'Status', 'advanced-passkey-login' ); ?></th>
+								<th scope="col" data-sort="date"><?php esc_html_e( 'Timestamp', 'advanced-passkey-login' ); ?></th>
+								<th scope="col" data-sort="text"><?php esc_html_e( 'Authenticator', 'advanced-passkey-login' ); ?></th>
+								<th scope="col" data-sort="text"><?php esc_html_e( 'User Ref', 'advanced-passkey-login' ); ?></th>
+								<th scope="col" data-sort="text"><?php esc_html_e( 'IP Address', 'advanced-passkey-login' ); ?></th>
+								<th scope="col" data-sort="text"><?php esc_html_e( 'Event', 'advanced-passkey-login' ); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php if ( empty( $login_rows ) ) : ?>
+								<tr><td colspan="8"><?php esc_html_e( 'No login activity has been logged yet.', 'advanced-passkey-login' ); ?></td></tr>
+							<?php else : ?>
+								<?php foreach ( $login_rows as $row ) : ?>
+									<?php
+									$data = json_decode( (string) ( $row['log_data'] ?? '' ), true );
+									if ( ! is_array( $data ) ) {
+										$data = array();
+									}
+
+									$event      = (string) ( $row['event_type'] ?? '' );
+									$method     = __( 'Other', 'advanced-passkey-login' );
+									$method_key = 'other';
+									$status     = __( 'Info', 'advanced-passkey-login' );
+									$status_key = 'info';
+
+									if ( 'login_success' === $event ) {
+										$method     = __( 'Passkey', 'advanced-passkey-login' );
+										$method_key = 'passkey';
+										$status     = __( 'Success', 'advanced-passkey-login' );
+										$status_key = 'success';
+									} elseif ( 'login_password_success' === $event ) {
+										$method     = __( 'Password', 'advanced-passkey-login' );
+										$method_key = 'password';
+										$status     = __( 'Success', 'advanced-passkey-login' );
+										$status_key = 'success';
+									} elseif ( 'login_password_blocked_passkey_only' === $event ) {
+										$method     = __( 'Password', 'advanced-passkey-login' );
+										$method_key = 'password';
+										$status     = __( 'Blocked', 'advanced-passkey-login' );
+										$status_key = 'blocked';
+									} elseif ( 'login_bypass_cookie_used' === $event ) {
+										$method     = __( 'Password', 'advanced-passkey-login' );
+										$method_key = 'password';
+										$status     = __( 'Bypassed', 'advanced-passkey-login' );
+										$status_key = 'bypassed';
+									} elseif ( in_array( $event, array( 'login_failed', 'login_credential_mismatch', 'login_begin_failed' ), true ) ) {
+										$method     = __( 'Passkey', 'advanced-passkey-login' );
+										$method_key = 'passkey';
+										$status     = __( 'Failed', 'advanced-passkey-login' );
+										$status_key = 'failed';
+									}
+
+									$authenticator     = '—';
+									$authenticator_key = 'unknown';
+									if ( in_array( $method_key, array( 'passkey', 'other' ), true ) ) {
+										$credential_hash   = $this->extract_credential_hash_from_log_payload( $data );
+										$raw_authenticator = isset( $data['authenticator'] ) ? (string) $data['authenticator'] : '';
+										$raw_label         = isset( $data['authenticator_label'] ) ? (string) $data['authenticator_label'] : '';
+										$raw_aaguid        = isset( $data['aaguid'] ) ? (string) $data['aaguid'] : '';
+										if ( '' === $raw_authenticator && '' !== $credential_hash ) {
+											$raw_authenticator = $this->lookup_credential_provider_hint_for_hash( $credential_hash );
+										}
+										if ( '' === $raw_label && '' !== $credential_hash ) {
+											$raw_label = $this->lookup_credential_label_for_hash( $credential_hash );
+										}
+										if ( '' === $raw_aaguid && '' !== $credential_hash ) {
+											$raw_aaguid = $this->lookup_credential_aaguid_for_hash( $credential_hash );
+										}
+										$meta              = $this->resolve_authenticator_metadata_for_reporting( $raw_authenticator, $raw_label, $raw_aaguid );
+										$authenticator     = (string) ( $meta['label'] ?? '' );
+										$authenticator_key = (string) ( $meta['key'] ?? 'unknown' );
+
+										if ( '' === $authenticator ) {
+											$authenticator = __( 'Unknown Authenticator', 'advanced-passkey-login' );
+										}
+									}
+
+									$user_ref    = isset( $data['user_ref'] ) ? (string) $data['user_ref'] : '';
+									$user_ref_ui = '—';
+									if ( '' !== $user_ref ) {
+										$user_ref_ui = strlen( $user_ref ) > 12 ? substr( $user_ref, 0, 12 ) . '...' : $user_ref;
+									}
+									$ip_ui = $this->resolve_audit_ip_for_display( $data );
+									?>
+									<tr data-method-key="<?php echo esc_attr( $method_key ); ?>">
+										<td><?php echo esc_html( (string) ( $row['id'] ?? '' ) ); ?></td>
+										<td><?php echo esc_html( $method ); ?></td>
+										<td>
+											<span class="wpkpro-audit-status-pill wpkpro-audit-status-pill--<?php echo esc_attr( $status_key ); ?>">
+												<?php echo esc_html( $status ); ?>
+											</span>
+										</td>
+										<td><?php echo esc_html( $this->format_utc_datetime_for_display( (string) ( $row['log_timestamp'] ?? '' ) ) ); ?></td>
+										<td>
+											<?php if ( '—' === $authenticator ) : ?>
+												&mdash;
+											<?php else : ?>
+												<?php echo $this->render_authenticator_provider_badge( $authenticator, array( 'provider_key' => $authenticator_key ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- render_authenticator_provider_badge() returns sanitized badge HTML. ?>
+											<?php endif; ?>
+										</td>
+										<td><code><?php echo esc_html( $user_ref_ui ); ?></code></td>
+										<td><code><?php echo esc_html( $ip_ui ); ?></code></td>
+										<td><?php echo esc_html( $event ); ?></td>
+									</tr>
+								<?php endforeach; ?>
+							<?php endif; ?>
+						</tbody>
+					</table>
+				</div>
+				<?php if ( ! empty( $audit_pagination_links ) ) : ?>
+					<nav class="tablenav-pages" aria-label="<?php esc_attr_e( 'Audit log pagination', 'advanced-passkey-login' ); ?>">
+						<ul class="page-numbers">
+							<?php foreach ( $audit_pagination_links as $audit_link ) : ?>
+								<li><?php echo wp_kses_post( $audit_link ); ?></li>
+							<?php endforeach; ?>
+						</ul>
+					</nav>
+				<?php endif; ?>
+				<?php endif; ?>
+			</div>
+		</div>
+
+		<div class="wpkpro-card wpkpro-metric-info-card">
+			<div class="wpkpro-card__header">
+				<div>
+					<h3><?php esc_html_e( 'Metric definitions', 'advanced-passkey-login' ); ?></h3>
+					<p><?php esc_html_e( 'Quick reference for the summary metrics shown above.', 'advanced-passkey-login' ); ?></p>
+				</div>
+			</div>
+			<div class="wpkpro-card__body">
+				<ul class="wpkpro-metric-info-list">
+					<li><strong><?php esc_html_e( 'Users with passkeys:', 'advanced-passkey-login' ); ?></strong> <?php esc_html_e( 'Unique users who currently have at least one active (non-revoked) passkey registered.', 'advanced-passkey-login' ); ?></li>
+					<li><strong><?php esc_html_e( 'Passkeys stored:', 'advanced-passkey-login' ); ?></strong> <?php esc_html_e( 'Total number of active passkeys stored across all users.', 'advanced-passkey-login' ); ?></li>
+					<li><strong><?php esc_html_e( 'Logins with passkey:', 'advanced-passkey-login' ); ?></strong> <?php esc_html_e( 'Count of successful passkey login events recorded in the audit log.', 'advanced-passkey-login' ); ?></li>
+					<li><strong><?php esc_html_e( 'Password logins:', 'advanced-passkey-login' ); ?></strong> <?php esc_html_e( 'Count of successful password login events recorded in the audit log.', 'advanced-passkey-login' ); ?></li>
+					<li><strong><?php esc_html_e( 'Blocked attempts:', 'advanced-passkey-login' ); ?></strong> <?php esc_html_e( 'Password attempts blocked by passkey-only enforcement policies.', 'advanced-passkey-login' ); ?></li>
+					<li><strong><?php esc_html_e( 'Bypassed logins:', 'advanced-passkey-login' ); ?></strong> <?php esc_html_e( 'Logins where the bypass cookie flow was used, as recorded in the audit log.', 'advanced-passkey-login' ); ?></li>
+				</ul>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
 	 * Resolve credential label from a stored credential hash.
 	 *
 	 * @param string $credential_hash Credential SHA-256 hash.
@@ -1950,6 +2343,42 @@ class ADVAPAFO_Settings {
 		}
 
 		return $total;
+	}
+
+	/**
+	 * Whether audit/activity logging is currently enabled.
+	 *
+	 * @return bool
+	 */
+	private function is_activity_logging_enabled(): bool {
+		return (bool) get_option( 'advapafo_activity_logging_enabled', true );
+	}
+
+	/**
+	 * Resolve a displayable IP address from a decoded log payload, if present.
+	 *
+	 * @param array<string, mixed> $data Decoded log payload.
+	 * @return string
+	 */
+	private function resolve_audit_ip_for_display( array $data ): string {
+		$candidate_keys = array( 'ip_masked', 'ip_address', 'client_ip', 'remote_addr', 'ip' );
+
+		foreach ( $candidate_keys as $candidate_key ) {
+			if ( ! isset( $data[ $candidate_key ] ) ) {
+				continue;
+			}
+
+			$value = sanitize_text_field( (string) $data[ $candidate_key ] );
+			if ( '' === $value ) {
+				continue;
+			}
+
+			if ( filter_var( $value, FILTER_VALIDATE_IP ) ) {
+				return $value;
+			}
+		}
+
+		return '—';
 	}
 
 	/**

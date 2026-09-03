@@ -5,7 +5,7 @@ import path from 'node:path';
 
 const ADMIN_USERNAME = process.env.PLAYWRIGHT_ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.PLAYWRIGHT_ADMIN_PASS || 'admin';
-const WORDPRESS_ROOT = process.env.PLAYWRIGHT_WP_ROOT || path.resolve(process.cwd(), '..', '..', 'lakeviewcc', 'app', 'public');
+const WORDPRESS_ROOT = process.env.PLAYWRIGHT_WP_ROOT || path.resolve(process.cwd(), '..', '..', 'demo', 'app', 'public');
 const MU_PLUGIN_DIR = path.join(WORDPRESS_ROOT, 'wp-content', 'mu-plugins');
 const SETTINGS_AUDIT_MU_PLUGIN_PREFIX = 'advapafo-settings-audit-e2e';
 const SETTINGS_PAGE_PATH = '/wp-admin/options-general.php?page=advanced-passkey-login';

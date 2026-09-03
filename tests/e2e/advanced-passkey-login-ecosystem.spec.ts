@@ -195,7 +195,9 @@ async function runSuccessfulPasskeyAuthSequence(page: Page): Promise<void> {
         isAjaxActionRequest(response.request(), 'advapafo_finish_registration'),
       );
 
-      await registerButton.click();
+      // Dispatch a real DOM click: pointer-based clicks can time out waiting for "stable"
+      // on this page even though the button is fully visible/interactive.
+      await registerButton.evaluate((node) => (node as HTMLElement).click());
 
       const finishRegistrationResponse = await finishRegistration;
       expect(finishRegistrationResponse.ok(), 'Passkey finish_registration should return a successful HTTP response.').toBeTruthy();

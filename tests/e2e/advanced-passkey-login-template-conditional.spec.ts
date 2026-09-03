@@ -6,7 +6,7 @@ import path from 'node:path';
 const ADMIN_USERNAME = process.env.PLAYWRIGHT_ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.PLAYWRIGHT_ADMIN_PASS || 'admin';
 const CONFIGURED_THEME_DIR = process.env.PLAYWRIGHT_ACTIVE_THEME_DIR || '';
-const WORDPRESS_ROOT = process.env.PLAYWRIGHT_WP_ROOT || path.resolve(process.cwd(), '..', '..', 'lakeviewcc', 'app', 'public');
+const WORDPRESS_ROOT = process.env.PLAYWRIGHT_WP_ROOT || path.resolve(process.cwd(), '..', '..', 'demo', 'app', 'public');
 const MU_PLUGIN_DIR = path.join(WORDPRESS_ROOT, 'wp-content', 'mu-plugins');
 const THEME_PROBE_MU_PLUGIN_PREFIX = 'advapafo-template-theme-probe-e2e';
 const THEME_PROBE_TOKEN = crypto.randomUUID();
