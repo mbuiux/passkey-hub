@@ -1744,7 +1744,7 @@ class ADVAPAFO_Settings {
 						</tbody>
 					</table>
 				</div>
-				<?php if ( ! empty( $audit_pagination_links ) ) : ?>
+					<?php if ( ! empty( $audit_pagination_links ) ) : ?>
 					<nav class="tablenav-pages" aria-label="<?php esc_attr_e( 'Audit log pagination', 'advanced-passkey-login' ); ?>">
 						<ul class="page-numbers">
 							<?php foreach ( $audit_pagination_links as $audit_link ) : ?>
@@ -3021,9 +3021,9 @@ class ADVAPAFO_Settings {
 	 * Render advanced settings tab.
 	 */
 	private function render_advanced_tab() {
-		$show_separator            = (bool) advapafo_get_setting( 'show_separator', true );
-		$conditional_ui_enabled    = (bool) advapafo_get_setting( 'conditional_ui_enabled', false );
-		$activity_logging_enabled  = (bool) advapafo_get_setting( 'activity_logging_enabled', true );
+		$show_separator              = (bool) advapafo_get_setting( 'show_separator', true );
+		$conditional_ui_enabled      = (bool) advapafo_get_setting( 'conditional_ui_enabled', false );
+		$activity_logging_enabled    = (bool) advapafo_get_setting( 'activity_logging_enabled', true );
 		$activity_logging_overridden = advapafo_is_setting_overridden( 'activity_logging_enabled' );
 		if ( $conditional_ui_enabled ) {
 			$show_separator = false;
