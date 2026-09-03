@@ -384,6 +384,16 @@ class ADVAPAFO_Settings {
 
 		register_setting(
 			$this->option_group,
+			'advapafo_activity_logging_enabled',
+			array(
+				'type'              => 'boolean',
+				'sanitize_callback' => array( $this, 'sanitize_checkbox' ),
+				'default'           => true,
+			)
+		);
+
+		register_setting(
+			$this->option_group,
 			'advapafo_show_setup_notice',
 			array(
 				'type'              => 'boolean',
@@ -862,8 +872,11 @@ class ADVAPAFO_Settings {
 			$max_failures               = absint( advapafo_get_setting( 'rate_limit_max_failures', 5 ) );
 			$lockout                    = absint( advapafo_get_setting( 'rate_limit_lockout', 900 ) );
 
+			$activity_logging_enabled = (bool) advapafo_get_setting( 'activity_logging_enabled', true );
+
 			echo '<input type="hidden" name="advapafo_show_separator" value="' . esc_attr( $show_separator ? '1' : '0' ) . '" />';
 			echo '<input type="hidden" name="advapafo_conditional_ui_enabled" value="' . esc_attr( $conditional_ui_enabled ? '1' : '0' ) . '" />';
+			echo '<input type="hidden" name="advapafo_activity_logging_enabled" value="' . esc_attr( $activity_logging_enabled ? '1' : '0' ) . '" />';
 			echo '<input type="hidden" name="advapafo_button_style" value="' . esc_attr( (string) $button_style ) . '" />';
 			echo '<input type="hidden" name="advapafo_rp_name" value="' . esc_attr( (string) $rp_name ) . '" />';
 			echo '<input type="hidden" name="advapafo_rp_id" value="' . esc_attr( (string) $rp_id ) . '" />';
@@ -1598,7 +1611,7 @@ class ADVAPAFO_Settings {
 			<div class="wpkpro-card__body">
 				<?php if ( ! $activity_logging_enabled ) : ?>
 					<div class="wpkpro-flash wpkpro-flash--warning" role="status">
-						<p><?php esc_html_e( 'Activity logging has been disabled. Re-enable it in the Advanced tab to restore login activity charts and detailed audit rows.', 'advanced-passkey-login' ); ?></p>
+						<p><?php esc_html_e( 'Activity logging has been disabled in Settings > Advanced Passkeys > Advanced. Re-enable it to restore login activity charts and detailed audit rows.', 'advanced-passkey-login' ); ?></p>
 					</div>
 				<?php else : ?>
 				<p class="description">
@@ -2351,7 +2364,7 @@ class ADVAPAFO_Settings {
 	 * @return bool
 	 */
 	private function is_activity_logging_enabled(): bool {
-		return (bool) get_option( 'advapafo_activity_logging_enabled', true );
+		return (bool) advapafo_get_setting( 'activity_logging_enabled', true );
 	}
 
 	/**
@@ -3008,8 +3021,10 @@ class ADVAPAFO_Settings {
 	 * Render advanced settings tab.
 	 */
 	private function render_advanced_tab() {
-		$show_separator         = (bool) advapafo_get_setting( 'show_separator', true );
-		$conditional_ui_enabled = (bool) advapafo_get_setting( 'conditional_ui_enabled', false );
+		$show_separator            = (bool) advapafo_get_setting( 'show_separator', true );
+		$conditional_ui_enabled    = (bool) advapafo_get_setting( 'conditional_ui_enabled', false );
+		$activity_logging_enabled  = (bool) advapafo_get_setting( 'activity_logging_enabled', true );
+		$activity_logging_overridden = advapafo_is_setting_overridden( 'activity_logging_enabled' );
 		if ( $conditional_ui_enabled ) {
 			$show_separator = false;
 		}
@@ -3172,6 +3187,21 @@ class ADVAPAFO_Settings {
 					<p><?php esc_html_e( 'Seconds.', 'advanced-passkey-login' ); ?></p>
 				</div>
 			</div>
+		</div>
+
+		<div class="advapafo-card advapafo-card--setting">
+			<div class="advapafo-setting-copy">
+				<h3><?php esc_html_e( 'Activity &amp; audit logging', 'advanced-passkey-login' ); ?><?php advapafo_render_managed_setting_badge( 'activity_logging_enabled' ); ?></h3>
+				<p><?php esc_html_e( 'Powers the Dashboard and Audit Log tabs. Login events are recorded with a pseudonymized user reference and a privacy-safe masked IP address (the full IP is never stored). Turn this off to stop recording new events entirely.', 'advanced-passkey-login' ); ?></p>
+			</div>
+			<label class="advapafo-switch">
+				<input type="checkbox" name="advapafo_activity_logging_enabled" value="1" <?php checked( $activity_logging_enabled ); ?> <?php disabled( $activity_logging_overridden ); ?> />
+				<span class="advapafo-switch__track"><span class="advapafo-switch__thumb"></span></span>
+				<span class="screen-reader-text"><?php esc_html_e( 'Activity & audit logging', 'advanced-passkey-login' ); ?></span>
+			</label>
+			<?php if ( $activity_logging_overridden ) : ?>
+				<input type="hidden" name="advapafo_activity_logging_enabled" value="<?php echo esc_attr( $activity_logging_enabled ? '1' : '0' ); ?>" />
+			<?php endif; ?>
 		</div>
 
 		<?php

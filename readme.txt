@@ -42,6 +42,7 @@ Don't settle for basic alternatives that only support the default backend login 
 * **Theme Template Customization:** Seamlessly match your active brand by overriding the login button template layout via `/advanced-passkeys/login/button.php` inside your child theme.
 * **Advanced Analytics Dashboard:** Track credential performance over time with a live Authenticator Overview breakdown card and a Last Login audit trail log.
 * **Full Audit Log:** A dedicated Audit Log tab with searchable, sortable, and filterable paginated login-activity history and a per-provider authenticator usage breakdown.
+* **Privacy-Safe Activity Logging:** Audit events use a pseudonymized user reference and a masked IP address (the full IP is never stored) — disable logging entirely, anytime, from Settings > Advanced Passkeys > Advanced.
 * **Hardened Brute-Force Rate Limiting:** Enforce strict local connection limits to log and block malicious behavior, backed by automated daily cleanup crons to keep your database lean.
 * **Multisite Network Provisioning:** Network-aware architecture instantly partitions tables dynamically and inherits security guardrails across newly deployed network sites.
 * **Clean Housekeeping Routine:** Implements a strict, responsible uninstall function that leaves behind absolutely zero orphaned database tables or leftover configuration choices.
@@ -151,6 +152,10 @@ Yes. Copy the plugin's internal markup template directly into your theme's activ
 
 Deactivating the plugin preserves passkey records and settings. Running the default WordPress delete routine removes the plugin's credential, rate-limit, and log tables alongside matching `advapafo_*` configuration rows.
 
+= What does the Audit Log store, and is it privacy-safe? =
+
+Yes. Audit log entries never include a raw IP address, email address, username, or free-text message. Each event stores only: a pseudonymized user reference (a one-way HMAC hash, not the raw user ID), the event type and timestamp, the authenticator provider (for passkey events), and a masked IP address for geographic/abuse context — the last octet of IPv4 addresses (and the last 64 bits of IPv6 addresses) is zeroed out before storage, so the exact originating address is never recorded. You can turn activity logging off entirely at **Settings > Advanced Passkeys > Advanced > Activity & audit logging**.
+
 == Developer Configuration ==
 
 Advanced Passkeys supports code-managed configuration for developers, agencies, and infrastructure teams that deploy settings through version control. This helps apply the same passkey policy across many sites without manual option changes.
@@ -214,6 +219,7 @@ For automated environments that favor infrastructure-level array maps, define th
 = 1.1.14 =
 * Added: dedicated Audit Log tab with KPI stats, a per-provider authenticator usage table, and a searchable, sortable, filterable, paginated login-activity table.
 * Added: privacy-safe masked IP address logging (last IPv4 octet / IPv6 host bits zeroed) so audit log entries include IP context without ever storing a raw IP.
+* Added: "Activity & audit logging" on/off toggle under Settings > Advanced Passkeys > Advanced.
 * Fixed: settings screen card spacing so tab content no longer appears nested flush against the panel edges.
 
 = 1.1.13 =

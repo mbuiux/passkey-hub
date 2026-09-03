@@ -2804,7 +2804,7 @@ class ADVAPAFO_Passkeys {
 			return;
 		}
 
-		if ( ! (bool) get_option( 'advapafo_activity_logging_enabled', true ) ) {
+		if ( ! (bool) advapafo_get_setting( 'activity_logging_enabled', true ) ) {
 			return;
 		}
 
