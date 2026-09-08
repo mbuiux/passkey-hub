@@ -239,7 +239,7 @@ class ADVAPAFO_Integration_Manager {
 		register_block_type(
 			'advanced-passkey-login/login-button',
 			array(
-				'api_version'     => 3,
+				'api_version'     => 2,
 				'editor_script'   => 'advapafo-gutenberg-blocks',
 				'editor_style'    => 'advapafo-gutenberg-blocks',
 				'title'           => __( 'Passkey Login Button', 'advanced-passkey-login' ),
@@ -323,7 +323,7 @@ class ADVAPAFO_Integration_Manager {
 		register_block_type(
 			'advanced-passkey-login/register-button',
 			array(
-				'api_version'     => 3,
+				'api_version'     => 2,
 				'editor_script'   => 'advapafo-gutenberg-blocks',
 				'editor_style'    => 'advapafo-gutenberg-blocks',
 				'title'           => __( 'Passkey Register Button', 'advanced-passkey-login' ),
@@ -382,7 +382,7 @@ class ADVAPAFO_Integration_Manager {
 		register_block_type(
 			'advanced-passkey-login/passkey-profile',
 			array(
-				'api_version'     => 3,
+				'api_version'     => 2,
 				'editor_script'   => 'advapafo-gutenberg-blocks',
 				'editor_style'    => 'advapafo-gutenberg-blocks',
 				'title'           => __( 'Account Passkeys', 'advanced-passkey-login' ),
@@ -410,7 +410,7 @@ class ADVAPAFO_Integration_Manager {
 		register_block_type(
 			'advanced-passkey-login/setup-prompt',
 			array(
-				'api_version'     => 3,
+				'api_version'     => 2,
 				'editor_script'   => 'advapafo-gutenberg-blocks',
 				'editor_style'    => 'advapafo-gutenberg-blocks',
 				'title'           => __( 'Passkey Setup Prompt', 'advanced-passkey-login' ),
@@ -572,7 +572,7 @@ class ADVAPAFO_Integration_Manager {
 		register_block_type(
 			$block_name,
 			array(
-				'api_version'     => 3,
+				'api_version'     => 2,
 				'editor_script'   => 'advapafo-gutenberg-blocks',
 				'editor_style'    => 'advapafo-gutenberg-blocks',
 				'title'           => $this->get_integration_block_title( $integration_key ),
@@ -734,6 +734,7 @@ class ADVAPAFO_Integration_Manager {
 		if ( 'woocommerce' === $integration_key ) {
 			add_action( 'woocommerce_login_form_end', array( $this, 'render_woocommerce_auto_inject' ) );
 			add_action( 'woocommerce_after_checkout_registration_form', array( $this, 'render_woocommerce_auto_inject' ) );
+			add_action( 'woocommerce_edit_account_form', array( $this, 'render_woocommerce_account_register_auto_inject' ) );
 			return;
 		}
 
@@ -741,6 +742,7 @@ class ADVAPAFO_Integration_Manager {
 			add_action( 'edd_login_fields_after', array( $this, 'render_edd_auto_inject' ) );
 			add_action( 'edd_purchase_form_after_user_info', array( $this, 'render_edd_auto_inject' ) );
 			add_action( 'edd_purchase_form_user_info', array( $this, 'render_edd_auto_inject' ) );
+			add_action( 'edd_profile_editor_after_password_fields', array( $this, 'render_edd_account_register_auto_inject' ) );
 			return;
 		}
 
@@ -753,12 +755,14 @@ class ADVAPAFO_Integration_Manager {
 
 		if ( 'ultimate_member' === $integration_key ) {
 			add_action( 'um_after_login_fields', array( $this, 'render_ultimate_member_auto_inject' ), 10005 );
+			add_action( 'um_after_account_password', array( $this, 'render_ultimate_member_account_register_auto_inject' ) );
 			return;
 		}
 
 		if ( 'buddyboss' === $integration_key ) {
 			add_action( 'bp_after_sidebar_login_form', array( $this, 'render_buddyboss_auto_inject' ) );
 			add_action( 'bp_after_login_widget_form', array( $this, 'render_buddyboss_auto_inject' ) );
+			add_action( 'bp_core_general_settings_before_submit', array( $this, 'render_buddyboss_account_register_auto_inject' ) );
 			return;
 		}
 
@@ -809,6 +813,15 @@ class ADVAPAFO_Integration_Manager {
 	}
 
 	/**
+	 * Render the passkey management section inside the BuddyPress/BuddyBoss
+	 * "Email & Password" settings form, between the password fields and the
+	 * submit button.
+	 */
+	public function render_buddyboss_account_register_auto_inject(): void {
+		$this->render_integration_auto_inject( 'buddyboss', '[advapafo_passkey_profile]', false );
+	}
+
+	/**
 	 * Render WooCommerce auto-injected passkey prompt.
 	 */
 	public function render_woocommerce_auto_inject(): void {
@@ -816,10 +829,29 @@ class ADVAPAFO_Integration_Manager {
 	}
 
 	/**
+	 * Render the passkey management section inside the WooCommerce "Account
+	 * details" form, between the password-change fields and the submit button.
+	 *
+	 * Shows just the register prompt until the user has a passkey, then
+	 * upgrades to the full credentials table.
+	 */
+	public function render_woocommerce_account_register_auto_inject(): void {
+		$this->render_integration_auto_inject( 'woocommerce', '[advapafo_passkey_profile]', false );
+	}
+
+	/**
 	 * Render EDD auto-injected passkey prompt.
 	 */
 	public function render_edd_auto_inject(): void {
 		$this->render_integration_auto_inject( 'edd', '[advapafo_edd_login]' );
+	}
+
+	/**
+	 * Render the passkey management section inside the EDD "Profile Editor"
+	 * form, between the password fields and the submit button.
+	 */
+	public function render_edd_account_register_auto_inject(): void {
+		$this->render_integration_auto_inject( 'edd', '[advapafo_passkey_profile]', false );
 	}
 
 	/**
@@ -834,6 +866,14 @@ class ADVAPAFO_Integration_Manager {
 	 */
 	public function render_ultimate_member_auto_inject(): void {
 		$this->render_integration_auto_inject( 'ultimate_member', '[advapafo_ultimate_member_login]' );
+	}
+
+	/**
+	 * Render the passkey management section inside the Ultimate Member
+	 * account "Password" tab, between the password fields and the submit button.
+	 */
+	public function render_ultimate_member_account_register_auto_inject(): void {
+		$this->render_integration_auto_inject( 'ultimate_member', '[advapafo_passkey_profile]', false );
 	}
 
 	/**
@@ -852,30 +892,24 @@ class ADVAPAFO_Integration_Manager {
 	public function render_gravityforms_auto_inject( $form, bool $ajax ): void {
 		unset( $ajax );
 
-		if ( ! $this->should_auto_inject_for_integration( 'gravityforms' ) ) {
-			return;
-		}
-
 		if ( ! $this->is_gravityforms_login_like_form( $form ) ) {
 			return;
 		}
 
-		$output = do_shortcode( '[advapafo_gravityforms_login]' );
-		if ( '' === trim( $output ) ) {
-			return;
-		}
-
-		echo wp_kses_post( $output );
+		$this->render_integration_auto_inject( 'gravityforms', '[advapafo_gravityforms_login]' );
 	}
 
 	/**
 	 * Render integration shortcode output when auto-injection applies.
 	 *
-	 * @param string $integration_key Integration key.
-	 * @param string $shortcode       Base shortcode.
+	 * @param string $integration_key    Integration key.
+	 * @param string $shortcode          Base shortcode.
+	 * @param bool   $require_logged_out Whether this prompt is only valid for logged-out visitors
+	 *                                   (e.g. a login button). Pass false for prompts that require
+	 *                                   an authenticated user instead (e.g. a registration prompt).
 	 */
-	private function render_integration_auto_inject( string $integration_key, string $shortcode ): void {
-		if ( ! $this->should_auto_inject_for_integration( $integration_key ) ) {
+	private function render_integration_auto_inject( string $integration_key, string $shortcode, bool $require_logged_out = true ): void {
+		if ( ! $this->should_auto_inject_for_integration( $integration_key, $require_logged_out ) ) {
 			return;
 		}
 
@@ -898,17 +932,81 @@ class ADVAPAFO_Integration_Manager {
 		}
 
 		$this->auto_inject_rendered[ $render_key ] = true;
-		echo wp_kses_post( $output );
+		echo wp_kses( $output, $this->get_auto_inject_allowed_html() );
+	}
+
+	/**
+	 * Allowed HTML for auto-injected integration output.
+	 *
+	 * Extends the standard post allowlist with the plugin's own trusted SVG
+	 * icon markup and the `<input>` field used by the registration prompt,
+	 * none of which `wp_kses_post()` allows by default.
+	 *
+	 * @return array<string, array<string, bool>>
+	 */
+	private function get_auto_inject_allowed_html(): array {
+		$allowed = wp_kses_allowed_html( 'post' );
+
+		$allowed['svg']    = array(
+			'xmlns'           => true,
+			'width'           => true,
+			'height'          => true,
+			'viewbox'         => true,
+			'fill'            => true,
+			'stroke'          => true,
+			'stroke-width'    => true,
+			'stroke-linecap'  => true,
+			'stroke-linejoin' => true,
+			'aria-hidden'     => true,
+			'class'           => true,
+		);
+		$allowed['path']   = array(
+			'd'     => true,
+			'class' => true,
+		);
+		$allowed['circle'] = array(
+			'cx'    => true,
+			'cy'    => true,
+			'r'     => true,
+			'class' => true,
+		);
+		$allowed['line']   = array(
+			'x1'    => true,
+			'y1'    => true,
+			'x2'    => true,
+			'y2'    => true,
+			'class' => true,
+		);
+		$allowed['input']  = array(
+			'type'             => true,
+			'id'               => true,
+			'class'            => true,
+			'name'             => true,
+			'value'            => true,
+			'placeholder'      => true,
+			'maxlength'        => true,
+			'aria-describedby' => true,
+			'data-*'           => true,
+		);
+
+		return $allowed;
 	}
 
 	/**
 	 * Check whether auto-injection should run for an integration.
 	 *
-	 * @param string $integration_key Integration key.
+	 * @param string $integration_key    Integration key.
+	 * @param bool   $require_logged_out Whether this prompt is only valid for logged-out visitors
+	 *                                   (e.g. a login button). Pass false for prompts that require
+	 *                                   an authenticated user instead (e.g. a registration prompt).
 	 * @return bool
 	 */
-	private function should_auto_inject_for_integration( string $integration_key ): bool {
-		if ( is_admin() || is_user_logged_in() ) {
+	private function should_auto_inject_for_integration( string $integration_key, bool $require_logged_out = true ): bool {
+		if ( is_admin() ) {
+			return false;
+		}
+
+		if ( is_user_logged_in() === $require_logged_out ) {
 			return false;
 		}
 

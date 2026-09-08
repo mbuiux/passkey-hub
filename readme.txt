@@ -3,7 +3,7 @@ Contributors: wppasskey, mbuiux
 Tags: passkeys, webauthn, passwordless, login, security
 Requires at least: 6.0
 Tested up to: 7.1
-Stable tag: 1.1.14
+Stable tag: 1.1.15
 Requires PHP: 8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -215,6 +215,14 @@ For automated environments that favor infrastructure-level array maps, define th
 7. The returning user login state demonstrating the Last used device indicator pill for returning passkey users.
 
 == Changelog ==
+
+= 1.1.15 =
+* Fixed: Gutenberg blocks (login button, register button, account passkeys, setup prompt, and all platform integration blocks) can now be selected, moved, and removed in the block editor, and match the look of native blocks.
+* Fixed: the passkey icon was being stripped from auto-injected login/registration prompts (WooCommerce, EDD, MemberPress, Ultimate Member, BuddyBoss, PMPro, Gravity Forms) due to overly strict output sanitization.
+* Changed: the passkey login button's size now matches the surrounding theme's buttons across shortcodes, blocks, and integrations instead of a smaller fixed size.
+* Changed: auto-injected integration prompts now blend into the host plugin's own form instead of showing a boxed, accent-colored card.
+* Added: WooCommerce, EDD, BuddyPress/BuddyBoss, and Ultimate Member "Account details" pages now show a passkey registration prompt after the password fields, which upgrades to the full credentials table once a passkey is registered.
+* Fixed: the credentials table could be clipped with no way to reach hidden columns/actions on narrower layouts; it now scrolls horizontally when needed.
 
 = 1.1.14 =
 * Added: dedicated Audit Log tab with KPI stats, a per-provider authenticator usage table, and a searchable, sortable, filterable, paginated login-activity table.

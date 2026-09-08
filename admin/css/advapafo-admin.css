@@ -1020,12 +1020,83 @@
 }
 
 .advapafo-integration-passkey--auto-inject {
-    border-color: rgba(126, 91, 239, 0.28);
-    box-shadow: 0 8px 16px rgba(126, 91, 239, 0.08);
+    margin: 16px 0 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
 }
 
 .advapafo-integration-passkey .advapafo-shortcode-login-wrap {
     margin: 0;
+}
+
+/* Auto-injected into another plugin's own login/checkout form (WooCommerce, EDD,
+   MemberPress, Ultimate Member, BuddyBoss, PMPro, Gravity Forms): blend in with
+   the surrounding form instead of showing a boxed card. */
+.advapafo-integration-passkey--auto-inject .advapafo-shortcode-login-wrap {
+    max-width: none;
+    margin: 0;
+}
+
+.advapafo-integration-passkey--auto-inject .advapafo-shortcode-login-wrap .advapafo-passkey-btn {
+    width: auto !important;
+}
+
+/* WooCommerce "Account details" form: space the passkey section away from the
+   password fields above, blend its card into the surrounding form instead of
+   showing a competing boxed panel, and let the register field span the full
+   form width like the other inputs instead of the narrower profile-page column. */
+.woocommerce-EditAccountForm .advapafo-profile-section {
+    margin: 28px 0 20px;
+    font-family: inherit;
+}
+
+.woocommerce-EditAccountForm .advapafo-profile-card {
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+}
+
+.woocommerce-EditAccountForm .advapafo-profile-register-row {
+    padding: 0;
+    border-bottom: none;
+}
+
+.woocommerce-EditAccountForm .advapafo-profile-register-controls {
+    max-width: none;
+    gap: 14px;
+}
+
+/* EDD "Profile Editor" form: match the theme's font and let the register field
+   use the available width instead of the narrower profile-page column. Unlike
+   WooCommerce, EDD's own fields are already boxed, so the card is left as-is. */
+#edd_profile_editor_form .advapafo-profile-section {
+    font-family: inherit;
+}
+
+#edd_profile_editor_form .advapafo-profile-register-controls {
+    max-width: none;
+}
+
+/* BuddyPress/BuddyBoss "Settings > General" form: same treatment as EDD. */
+#your-profile .advapafo-profile-section {
+    font-family: inherit;
+}
+
+#your-profile .advapafo-profile-register-controls {
+    max-width: none;
+}
+
+/* Ultimate Member account "Password" tab: match the theme's font. */
+.um-account-tab-password .advapafo-profile-section {
+    font-family: inherit;
+}
+
+.um-account-tab-password .advapafo-profile-register-controls {
+    max-width: none;
 }
 
 @media (max-width: 1100px) {
@@ -1262,6 +1333,9 @@
 /* Credentials table */
 .advapafo-profile-creds {
     padding: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .advapafo-profile-warning {
@@ -1284,7 +1358,8 @@
 }
 
 .advapafo-creds-table {
-    width: 100%;
+    min-width: 100%;
+    width: max-content;
     border-collapse: collapse;
     margin-top: 16px;
     font-size: 13.5px;
@@ -1369,9 +1444,9 @@
 
 .advapafo-shortcode-login-wrap .advapafo-passkey-btn {
     width: 100% !important;
-    min-height: 30px;
+    min-height: 0;
     margin: 0;
-    padding: 0 12px !important;
+    padding: 12px 24px !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1381,6 +1456,8 @@
     border-radius: 4px !important;
     background: #111820 !important;
     color: #fff !important;
+    font-size: 14px;
+    line-height: 1.4;
     font-weight: 600;
     text-shadow: none;
     box-shadow: 0 2px 8px rgba(17, 24, 32, 0.22);

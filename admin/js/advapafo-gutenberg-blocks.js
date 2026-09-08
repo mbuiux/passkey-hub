@@ -7,11 +7,17 @@
     var createElement = wp.element.createElement;
     var __ = wp.i18n.__;
     var InspectorControls = wp.blockEditor.InspectorControls;
+    var useBlockProps = wp.blockEditor.useBlockProps;
     var PanelBody = wp.components.PanelBody;
+    var Placeholder = wp.components.Placeholder;
     var TextControl = wp.components.TextControl;
     var TextareaControl = wp.components.TextareaControl;
     var ToggleControl = wp.components.ToggleControl;
     var SelectControl = wp.components.SelectControl;
+
+    if (!useBlockProps) {
+        return;
+    }
 
     var registry = (window.ADVAPAFOIntegrationBlocks && Array.isArray(window.ADVAPAFOIntegrationBlocks.blocks))
         ? window.ADVAPAFOIntegrationBlocks.blocks
@@ -103,6 +109,7 @@
             };
 
         registerBlockType(blockConfig.name, {
+            apiVersion: 2,
             title: blockConfig.title || __('Passkey Login', 'advanced-passkey-login'),
             description: blockConfig.description || __('Render a passkey sign-in control.', 'advanced-passkey-login'),
             icon: blockConfig.icon || 'shield',
@@ -110,13 +117,14 @@
             keywords: Array.isArray(blockConfig.keywords) ? blockConfig.keywords : ['passkey', 'login'],
             attributes: attributes,
             edit: function (props) {
+                var blockProps = useBlockProps();
                 var buttonLabel = props.attributes.button_label || props.attributes.label || blockConfig.label || __('Sign in with Passkey', 'advanced-passkey-login');
                 var title = props.attributes.title || blockConfig.title || __('Passkey Login', 'advanced-passkey-login');
                 var hint = blockConfig.description || __('Preview of the passkey CTA shown for this block.', 'advanced-passkey-login');
 
                 return createElement(
                     'div',
-                    { className: 'advapafo-block-editor-card' },
+                    blockProps,
                     createElement(
                         InspectorControls,
                         null,
@@ -131,13 +139,19 @@
                             })
                         )
                     ),
-                    createElement('p', { className: 'advapafo-block-editor-card__title' }, title),
-                    createElement('p', { className: 'advapafo-block-editor-card__hint' }, hint),
-                    createElement('button', {
-                        type: 'button',
-                        className: 'button button-primary',
-                        disabled: true
-                    }, buttonLabel)
+                    createElement(
+                        Placeholder,
+                        {
+                            icon: blockConfig.icon || 'shield',
+                            label: title,
+                            instructions: hint
+                        },
+                        createElement('button', {
+                            type: 'button',
+                            className: 'button button-primary',
+                            disabled: true
+                        }, buttonLabel)
+                    )
                 );
             },
             save: function () {
